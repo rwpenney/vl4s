@@ -9,7 +9,7 @@ package uk.rwpenney.vl4s.gen
 object Generator {
   case class Config(
     schemaUrl: String = "v2.0.0.json",
-    srcOutput: String = "vl4s/src/main/scala/experiment.scala"
+    srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
   )
   val defaultConfig = Config()
 

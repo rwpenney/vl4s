@@ -33,7 +33,33 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 
 
 class OperatorCoder(defn: VLopDefn) extends TypeCoder {
-  def toCode: String = s"// class ${defn.name}\n"
+  def toCode: String = {
+    val classname = CodeGen.cleanClassName(defn.name)
+
+    val fieldnames = defn.properties.map { prop =>
+      ( prop.name, CodeGen.mapReserved.getOrElse(prop.name, prop.name) )
+    } . toMap
+
+    val fieldtypes = defn.properties.map { prop =>
+      ( prop.name, CodeGen.mapVLtypes.getOrElse(prop.vltype, prop.vltype) )
+    } . toMap
+
+    val fields = defn.properties.map { prop =>
+      s"|    _${fieldnames(prop.name)}: ${fieldtypes(prop.name)}"
+    } . mkString(",\n")
+
+    val modifiers = defn.properties.map { prop =>
+      val field = fieldnames(prop.name)
+      s"|  def ${field}(__arg: ${fieldtypes(prop.name)}): ${classname}" +
+            s" = this.copy(_${field} = __arg)"
+    } . mkString("\n")
+
+    s"""case class ${classname}(
+    ${fields}) {
+    ${modifiers}
+    |}
+    |""" . stripMargin
+  }
   // FIXME - much more here
 }
 
@@ -65,4 +91,24 @@ object CodeGen {
       case op: VLopDefn =>      new OperatorCoder(op)
     }
   }
+
+  // Conversion for VL properties which class with Scala reserved words
+  val mapReserved = Map(
+    "type" -> "vtype"
+  )
+
+  val mapVLtypes = Map(
+    "array" ->    "Seq[Any]", // FIXME - extract element type
+    "boolean" ->  "Boolean",
+    "number" ->   "Float",
+    "object" ->   "Any",      // FIXME - check appropriateness
+    "string" ->   "String"
+  )
+
+  def cleanClassName(orig: String): String =
+    orig.map {
+      case '<' => '_'
+      case '>' => '_'
+      case c =>   c
+    }
 }
