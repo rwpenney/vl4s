@@ -28,7 +28,7 @@ object Generator {
         println(config)
         val schema = SchemaParser(config.schemaUrl)
         val codegen = new CodeGen(new java.io.FileOutputStream(config.srcOutput))
-        codegen(CodeGen.toCodeable(schema))
+        codegen(schema)
       }
       case None => System.exit(1)
     }
