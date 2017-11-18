@@ -1,0 +1,7 @@
+*.json
+.*.swp
+
+jars/
+target/
+
+vl4s/src/main/scala/experiment.scala
