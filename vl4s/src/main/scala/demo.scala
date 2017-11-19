@@ -14,7 +14,9 @@ object Demo {
     val e1 = ScaleType.bin_linear
 
 
-    val plot = TopLevel_FacetSpec_() .
-      background("green")
+    val plot = TopLevel_FacetedUnitSpec_() .
+      background("green") .
+      //data("/dev/null") .
+      encoding(EncodingWithFacet())
   }
 }

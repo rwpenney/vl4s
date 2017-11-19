@@ -43,6 +43,7 @@ object Generator {
       case Some(config) => {
         println(config)
         val schema = SchemaParser(config.schemaUrl)
+        println(s"ObjRefs: ${schema.objRefs}")
         val codegen = new CodeGen(new java.io.FileOutputStream(config.srcOutput))
         codegen(schema)
       }

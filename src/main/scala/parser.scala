@@ -23,6 +23,7 @@ package uk.rwpenney.vl4s.gen
 
 import org.json4s.{ JArray, JField, JObject, JString, JValue }
 import org.json4s.native.JsonMethods.{ parse => J4Sparse }
+import scala.annotation.tailrec
 
 
 sealed abstract class VLtypeDefn(val name: String)
@@ -47,7 +48,27 @@ case class VLopDefn(override val name: String,
 case class VLobjRef(val alias: String,
                     target: VLtypeDefn) extends VLtypeDefn(alias)
 
-class VLschema(val types: Seq[VLtypeDefn])
+/** Representation of all VegaLite types extracted from a JSON schema */
+class VLschema(val types: Seq[VLtypeDefn]) {
+  /** Recursively search for all object-references within the schema */
+  def objRefs: Seq[VLobjRef] = {
+    @tailrec
+    def recurse(vltypes: Seq[VLtypeDefn],
+                objs: Seq[VLobjRef]): Seq[VLobjRef] = {
+      vltypes match {
+        case (or: VLobjRef) :: tail => recurse(tail, objs :+ or)
+        case (op: VLopDefn) :: tail => {
+          val children = op.properties.map { _.vltype }
+          recurse(children ++ tail, objs)
+        }
+        case _ +: tail => recurse(tail, objs)
+        case _ => objs
+      }
+    }
+
+    recurse(types, Nil)
+  }
+}
 
 
 /** Ingest Vega-Lite JSON schema, converting to object tree */
