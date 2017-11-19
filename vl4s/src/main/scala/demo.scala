@@ -12,5 +12,9 @@ object Demo {
   def main(args: Array[String]) {
     val e0 = AggregateOp.average
     val e1 = ScaleType.bin_linear
+
+
+    val plot = TopLevel_FacetSpec_() .
+      background("green")
   }
 }

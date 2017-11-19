@@ -3,29 +3,49 @@
  *  RW Penney, November 2017
  */
 
+//  Copyright (C) 2017, RW Penney
+//  This file is part of VL4S.
+//
+//  VL4S is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  Foobar is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with VL4S.  If not, see <http://www.gnu.org/licenses/>.
+
 package uk.rwpenney.vl4s.gen
 
 import org.json4s.{ JArray, JField, JObject, JString, JValue }
 import org.json4s.native.JsonMethods.{ parse => J4Sparse }
 
 
-abstract class VLtypeDefn(name: String)
+sealed abstract class VLtypeDefn(val name: String)
 
-case class VLbareType(name: String) extends VLtypeDefn(name)
+case class VLbareType(override val name: String) extends VLtypeDefn(name)
 
 case class VLarrayOf(vltype: VLtypeDefn) extends VLtypeDefn("[array]")
 
-case class VLenumDefn(name: String,
+case class VLenumDefn(override val name: String,
                       values: Seq[String]) extends VLtypeDefn(name)
 
-case class VLanyOf(name: String,
+case class VLanyOf(override val name: String,
                    options: Seq[VLtypeDefn]) extends VLtypeDefn(name)
 
-case class VLproperty(name: String, vltype: VLtypeDefn,
+case class VLproperty(name: String,
+                      vltype: VLtypeDefn,
                       description: Option[String] = None)
 
-case class VLopDefn(name: String,
+case class VLopDefn(override val name: String,
                     properties: Seq[VLproperty]) extends VLtypeDefn(name)
+
+case class VLobjRef(val alias: String,
+                    target: VLtypeDefn) extends VLtypeDefn(alias)
 
 class VLschema(val types: Seq[VLtypeDefn])
 
@@ -52,23 +72,30 @@ object SchemaParser {
   /** Extract single Vega-Lite type definition */
   def parseTypeDefn(vlTypeName: String,
                     spec: Map[String, JValue]): VLtypeDefn = {
+    def objToMap(obj: JValue): Map[String, JValue] = {
+      val JObject(items) = obj
+      items.map {
+        case JField(field, value) => (field, value) } .toMap
+    }
+
     spec match {
       case _ if spec.contains("anyOf") =>
-        VLbareType("any")   // FIXME - more here
+        parseAnyOf(vlTypeName, spec)
       case _ if spec.contains("enum") =>
         parseEnumDefn(vlTypeName, spec)
       case _ if spec.contains("properties") || spec.isEmpty =>
         parseOpDefn(vlTypeName, spec)
       case _ if spec.contains("$ref") =>
-        VLbareType("ref")   // FIXME - more here
+        parseRef(vlTypeName, spec)
       case _ if spec.contains("type") => {
         spec("type") match {
-          case JString("array") => {
-            val JObject(items) = spec("items")
+          case JString("array") =>
             VLarrayOf(parseTypeDefn(vlTypeName + "_array",
-                                    items.map {
-                                      case JField(f, v) => (f, v) }.toMap))
-          }
+                                    objToMap(spec("items"))))
+          case JString("object") =>
+            VLobjRef(vlTypeName,
+                     parseRef(vlTypeName + "_ref",
+                              objToMap(spec("additionalProperties"))))
           case JString(x) =>
             VLbareType(x)
           case JArray(tuple) => {
@@ -84,6 +111,20 @@ object SchemaParser {
       }
       case _ => {
         println(s"ERROR: Unable to cast ${vlTypeName}")
+        VLbareType("UNKNOWN")
+      }
+    }
+  }
+
+  val refRegex = """#/definitions/(.*)""".r
+
+  def parseRef(name: String, spec: Map[String, JValue]): VLbareType = {
+    val JString(xref) = spec("$ref")
+
+    xref match {
+      case refRegex(vltype) => VLbareType(vltype)
+      case _ => {
+        println(s"ERROR: Unable to cross-reference from cast ${name}")
         VLbareType("UNKNOWN")
       }
     }
@@ -130,5 +171,11 @@ object SchemaParser {
                description = spec.get("description") match {
                  case Some(JString(x)) => Some(x)
                  case _ => None })
+  }
+
+  def parseAnyOf(name: String,
+                 spec: Map[String, JValue]): VLanyOf = {
+    VLanyOf(name, Nil)
+    // FIXME - much more here
   }
 }

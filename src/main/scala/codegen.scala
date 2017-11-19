@@ -3,9 +3,26 @@
  *  RW Penney, November 2017
  */
 
+//  Copyright (C) 2017, RW Penney
+//  This file is part of VL4S.
+//
+//  VL4S is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  Foobar is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with VL4S.  If not, see <http://www.gnu.org/licenses/>.
+
 package uk.rwpenney.vl4s.gen
 
 import java.io.{ OutputStream, PrintWriter }
+import scala.annotation.tailrec
 
 
 trait TypeCoder {
@@ -21,7 +38,7 @@ class EmptyCoder extends TypeCoder {
 
 
 class BareCoder(defn: VLbareType) extends TypeCoder {
-  def typename = CodeGen.mapBareTypes(defn.name)
+  def typename = CodeGen.mapBareTypes.getOrElse(defn.name, defn.name)
   def toCode = ""
 }
 
@@ -39,12 +56,13 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 
   def toCode: String = {
     val terms = defn.values.map { term =>
-      s"""|  case object ${cleanName(term)} extends ${defn.name}Enum {
+      s"""|  val ${cleanName(term)} = new ${defn.name}Enum {
           |    val term: String = "${term}" }"""
     } . mkString("\n")
 
     s"""sealed trait ${defn.name}Enum
-    |case object ${defn.name} {
+    |trait ${defn.name}
+    |object ${defn.name} extends ${defn.name} {
     ${terms}
     |}
     |""" . stripMargin
@@ -56,8 +74,8 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 
 
 class AnyOfCoder(defn: VLanyOf) extends TypeCoder {
-  def typename = "Any"
-  def toCode = ""
+  def typename = CodeGen.cleanClassName(defn.name)
+  def toCode = s"sealed trait ${typename}\n"
 }
 
 
@@ -92,13 +110,26 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder {
   }
 
   def makeHelperClasses(): Option[String] = {
-    val locals = defn.properties.map { prop =>
-      prop.vltype match {
-        case enum: VLenumDefn => Some(enum)
-        case ao: VLanyOf => Some(ao)
-        case _ => None
+    @tailrec
+    def recurse(vltypes: Seq[VLtypeDefn],
+                locals: Seq[Option[VLtypeDefn]]): Seq[Option[VLtypeDefn]] = {
+      vltypes match {
+        case head :: tail => {
+          val (loc, children) = head match {
+            case enum: VLenumDefn =>  (Some(enum), Nil)
+            case ao: VLanyOf =>       (Some(ao), ao.options)
+            case arr: VLarrayOf =>    (None, Seq(arr.vltype))
+            case _ =>                 (None, Nil)
+          }
+          recurse(children ++ tail, locals :+ loc)
+        }
+        case _ => locals
       }
-    } . flatten
+    }
+    // FIXME - these need to be extracted to top of file, to allow type aliases
+
+    val locals = recurse(
+                  defn.properties.map { prop => prop.vltype }, Nil) . flatten
 
     // FIXME - insert actual type definition
 
@@ -109,6 +140,19 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder {
     } else {
       None
     }
+  }
+}
+
+
+class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
+  def typename = CodeGen.cleanClassName(defn.alias)
+  def targetname = CodeGen.cleanClassName(defn.target.name)
+  def toCode = {
+    s"""object ${defn.name} {
+    |  type ${typename} = ${targetname}
+    |}
+    |import ${defn.name}._
+    |""" . stripMargin
   }
 }
 
@@ -143,6 +187,7 @@ object CodeGen {
       case enum: VLenumDefn =>  new EnumCoder(enum)
       case ao: VLanyOf =>       new AnyOfCoder(ao)
       case op: VLopDefn =>      new OperatorCoder(op)
+      case or: VLobjRef =>      new ObjRefCoder(or)
       case _ =>                 new EmptyCoder
     }
   }
