@@ -12,7 +12,10 @@ which provides natural, and type-safe,
 ways of describing plots in Scala and emitting Vega-Lite JSON documents
 that can be embedded in web-pages.
 This is an alternative approach to that of [Vegas](https://www.vegas-viz.org/),
-and [Argus](https://github.com/aishfenton/Argus).
+and [Argus](https://github.com/aishfenton/Argus), aiming to create
+a DSL that is closer to the structure of the underlying JSON schema
+(hence, hopefully, easier to document) and allowing export
+of a json4s datastructure that could be customized by the user.
 
 The build-system is managed by [SBT](http://www.scala-sbt.org/),
 and consists of two projects:

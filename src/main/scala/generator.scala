@@ -24,7 +24,8 @@ package uk.rwpenney.vl4s.gen
 
 object Generator {
   case class Config(
-    schemaUrl: String = "v2.0.0.json",
+    schemaUrl: String = "https://raw.githubusercontent.com/vega/schema/" +
+                        "master/vega-lite/v2.0.0.json",
     srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
   )
   val defaultConfig = Config()
@@ -41,9 +42,8 @@ object Generator {
 
     optparse.parse(args, Config()) match {
       case Some(config) => {
-        println(config)
-        val schema = SchemaParser(config.schemaUrl)
-        println(s"ObjRefs: ${schema.objRefs}")
+        val src = scala.io.Source.fromURL(config.schemaUrl)
+        val schema = SchemaParser(src)
         val codegen = new CodeGen(new java.io.FileOutputStream(config.srcOutput))
         codegen(schema)
       }

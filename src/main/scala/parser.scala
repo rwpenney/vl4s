@@ -28,6 +28,30 @@ import scala.annotation.tailrec
 
 sealed abstract class VLtypeDefn(val name: String)
 
+object VLtypeDefn {
+  def expandDependencies(roots: Seq[VLtypeDefn]): Seq[VLtypeDefn] = {
+    @tailrec
+    def recurse(vltypes: Seq[VLtypeDefn],
+                locals: Seq[Option[VLtypeDefn]]): Seq[Option[VLtypeDefn]] = {
+      vltypes match {
+        case head :: tail => {
+          val (loc, children) = head match {
+            case op: VLopDefn =>      (Some(op), Nil)
+            case enum: VLenumDefn =>  (Some(enum), Nil)
+            case ao: VLanyOf =>       (Some(ao), ao.options)
+            case arr: VLarrayOf =>    (None, Seq(arr.vltype))
+            case _ =>                 (None, Nil)
+          }
+          recurse(children ++ tail, locals :+ loc)
+        }
+        case _ => locals
+      }
+    }
+
+    recurse(roots, Nil) . flatten
+  }
+}
+
 case class VLbareType(override val name: String) extends VLtypeDefn(name)
 
 case class VLarrayOf(vltype: VLtypeDefn) extends VLtypeDefn("[array]")
@@ -56,8 +80,8 @@ class VLschema(val types: Seq[VLtypeDefn]) {
     def recurse(vltypes: Seq[VLtypeDefn],
                 objs: Seq[VLobjRef]): Seq[VLobjRef] = {
       vltypes match {
-        case (or: VLobjRef) :: tail => recurse(tail, objs :+ or)
-        case (op: VLopDefn) :: tail => {
+        case (or: VLobjRef) +: tail => recurse(tail, objs :+ or)
+        case (op: VLopDefn) +: tail => {
           val children = op.properties.map { _.vltype }
           recurse(children ++ tail, objs)
         }
@@ -73,8 +97,8 @@ class VLschema(val types: Seq[VLtypeDefn]) {
 
 /** Ingest Vega-Lite JSON schema, converting to object tree */
 object SchemaParser {
-  def apply(filename: String): VLschema = {
-    val json = J4Sparse(new java.io.File(filename))
+  def apply(src: scala.io.BufferedSource): VLschema = {
+    val json = J4Sparse(src.reader)
     new VLschema(digestTree(json))
   }
 
@@ -90,15 +114,15 @@ object SchemaParser {
     defns
   }
 
+  def objToMap(obj: JValue): Map[String, JValue] = {
+    val JObject(items) = obj
+    items.map {
+      case JField(field, value) => (field, value) } .toMap
+  }
+
   /** Extract single Vega-Lite type definition */
   def parseTypeDefn(vlTypeName: String,
                     spec: Map[String, JValue]): VLtypeDefn = {
-    def objToMap(obj: JValue): Map[String, JValue] = {
-      val JObject(items) = obj
-      items.map {
-        case JField(field, value) => (field, value) } .toMap
-    }
-
     spec match {
       case _ if spec.contains("anyOf") =>
         parseAnyOf(vlTypeName, spec)
@@ -113,10 +137,13 @@ object SchemaParser {
           case JString("array") =>
             VLarrayOf(parseTypeDefn(vlTypeName + "_array",
                                     objToMap(spec("items"))))
-          case JString("object") =>
-            VLobjRef(vlTypeName,
-                     parseRef(vlTypeName + "_ref",
-                              objToMap(spec("additionalProperties"))))
+          case JString("object") => {
+            spec.get("additionalProperties") match {
+              case Some(addprops) =>
+                parseRef(vlTypeName, objToMap(addprops))
+              case None => VLbareType("object")
+            }
+          }
           case JString(x) =>
             VLbareType(x)
           case JArray(tuple) => {
@@ -139,11 +166,11 @@ object SchemaParser {
 
   val refRegex = """#/definitions/(.*)""".r
 
-  def parseRef(name: String, spec: Map[String, JValue]): VLbareType = {
+  def parseRef(name: String, spec: Map[String, JValue]): VLtypeDefn = {
     val JString(xref) = spec("$ref")
 
     xref match {
-      case refRegex(vltype) => VLbareType(vltype)
+      case refRegex(vltype) => VLobjRef(name, VLbareType(vltype))
       case _ => {
         println(s"ERROR: Unable to cross-reference from cast ${name}")
         VLbareType("UNKNOWN")
@@ -180,8 +207,6 @@ object SchemaParser {
       case (propname, fields) => parsePropDefn(opname, propname, fields)
     }
 
-    // FIXME - do something with "additionalProperties" field
-
     VLopDefn(opname, properties=props)
   }
 
@@ -196,7 +221,14 @@ object SchemaParser {
 
   def parseAnyOf(name: String,
                  spec: Map[String, JValue]): VLanyOf = {
-    VLanyOf(name, Nil)
-    // FIXME - much more here
+    val JArray(root) = spec("anyOf")
+    val options = for { JObject(obj) <- root } yield JObject(obj)
+    VLanyOf(name,
+            options.zipWithIndex.map {
+              case (obj, idx) => {
+                val subname = s"${name}_${idx}"
+                parseTypeDefn(subname, objToMap(obj))
+              }
+            })
   }
 }

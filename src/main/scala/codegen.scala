@@ -27,7 +27,24 @@ import scala.annotation.tailrec
 
 trait TypeCoder {
   def typename: String
+  def targetname: String = typename
   def toCode: String
+}
+
+
+trait ParentCoder {
+  def makeHelperClasses(roots: Seq[VLtypeDefn]): Option[String] = {
+    val locals = VLtypeDefn.expandDependencies(roots)
+
+    // FIXME - insert actual type definition
+    if (locals.nonEmpty) {
+      Some(locals.map { vltype =>
+        s"trait ${CodeGen.toCodeable(vltype).typename} // ${vltype.getClass.getName}"
+        } . mkString("", "\n", "\n\n"))
+    } else {
+      None
+    }
+  }
 }
 
 
@@ -38,13 +55,14 @@ class EmptyCoder extends TypeCoder {
 
 
 class BareCoder(defn: VLbareType) extends TypeCoder {
-  def typename = CodeGen.mapBareTypes.getOrElse(defn.name, defn.name)
+  def typename = CodeGen.cleanClassName(
+                    CodeGen.mapBareTypes.getOrElse(defn.name, defn.name))
   def toCode = ""
 }
 
 
 class ArrayCoder(defn: VLarrayOf) extends TypeCoder {
-  val itemtype = CodeGen.toCodeable(defn.vltype).typename
+  val itemtype = CodeGen.toCodeable(defn.vltype).targetname
 
   def typename = s"Seq[${itemtype}]"
   def toCode = ""
@@ -56,13 +74,12 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 
   def toCode: String = {
     val terms = defn.values.map { term =>
-      s"""|  val ${cleanName(term)} = new ${defn.name}Enum {
+      s"""|  final val ${cleanName(term)} = new ${typename} {
           |    val term: String = "${term}" }"""
     } . mkString("\n")
 
-    s"""sealed trait ${defn.name}Enum
-    |trait ${defn.name}
-    |object ${defn.name} extends ${defn.name} {
+    s"""sealed trait ${typename}
+    |object ${typename} extends ${typename} {
     ${terms}
     |}
     |""" . stripMargin
@@ -73,17 +90,33 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 }
 
 
-class AnyOfCoder(defn: VLanyOf) extends TypeCoder {
+class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
-  def toCode = s"sealed trait ${typename}\n"
+
+  def toCode: String = {
+    val options = defn.options.map { opt => {
+      val opttype = CodeGen.toCodeable(opt).targetname
+        s"""|  implicit def from${opttype}(_arg: ${opttype}) = {
+            |     // ${opt.getClass.getName}
+            |    new ${typename} { val dummy = 1 } }""" . stripMargin
+      }
+    } . mkString("\n")
+    // FIXME expand any embedded VLopDefn objects
+
+    Seq(makeHelperClasses(defn.options),
+        Some(s"sealed trait ${typename}"),
+        Some(s"object ${typename}Implicits extends ${typename} {"),
+        Some(options),
+        Some("}")) . flatten . mkString("", "\n", "\n\n")
+  }
 }
 
 
-class OperatorCoder(defn: VLopDefn) extends TypeCoder {
+class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
 
   val fieldTypes = defn.properties.map { prop =>
-    ( prop.name, CodeGen.toCodeable(prop.vltype).typename )
+    ( prop.name, CodeGen.toCodeable(prop.vltype).targetname )
   } . toMap
   val fieldNames = defn.properties.map { prop =>
     ( prop.name, CodeGen.mapReserved.getOrElse(prop.name, prop.name) )
@@ -100,7 +133,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder {
             s" = this.copy(_${field} = Some(__arg))"
     } . mkString("", "\n", "\n")
 
-    Seq(makeHelperClasses(),
+    Seq(makeHelperClasses(defn.properties.map { _.vltype }),
         Some(s"case class ${typename}("),
         if (fields.nonEmpty) Some(s"\n${fields}") else None,
         Some(") {\n"),
@@ -108,45 +141,12 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder {
         Some("}\n\n")) . flatten . mkString("")
     // FIXME - extract description as scaladoc comment
   }
-
-  def makeHelperClasses(): Option[String] = {
-    @tailrec
-    def recurse(vltypes: Seq[VLtypeDefn],
-                locals: Seq[Option[VLtypeDefn]]): Seq[Option[VLtypeDefn]] = {
-      vltypes match {
-        case head :: tail => {
-          val (loc, children) = head match {
-            case enum: VLenumDefn =>  (Some(enum), Nil)
-            case ao: VLanyOf =>       (Some(ao), ao.options)
-            case arr: VLarrayOf =>    (None, Seq(arr.vltype))
-            case _ =>                 (None, Nil)
-          }
-          recurse(children ++ tail, locals :+ loc)
-        }
-        case _ => locals
-      }
-    }
-    // FIXME - these need to be extracted to top of file, to allow type aliases
-
-    val locals = recurse(
-                  defn.properties.map { prop => prop.vltype }, Nil) . flatten
-
-    // FIXME - insert actual type definition
-
-    if (locals.nonEmpty) {
-      Some(locals.map { vltype =>
-        s"trait ${CodeGen.toCodeable(vltype).typename}"
-        } . mkString("", "\n", "\n\n"))
-    } else {
-      None
-    }
-  }
 }
 
 
 class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
   def typename = CodeGen.cleanClassName(defn.alias)
-  def targetname = CodeGen.cleanClassName(defn.target.name)
+  override def targetname = CodeGen.cleanClassName(defn.target.name)
   def toCode = {
     s"""object ${defn.name} {
     |  type ${typename} = ${targetname}
@@ -164,7 +164,12 @@ class CodeGen(val stream: OutputStream) {
     val warning = "/* AUTOGENERATED by VL4S - do not edit by hand */\n"
 
     pw.print(warning)
-    pw.print("\npackage uk.rwpenney.vl4s\n\n")
+    pw.print("""
+             |package uk.rwpenney.vl4s
+             |
+             |import scala.language.implicitConversions
+             |
+             |""" . stripMargin)
 
     CodeGen.makeTypeRefs(schema) match {
       case Some(typerefs) => pw.print(typerefs)
@@ -206,10 +211,9 @@ object CodeGen {
 
     if (objrefs.nonEmpty) {
       Some((Seq("object TypeRefs {") ++
-            objrefs.map { or => {
-              val typename = cleanClassName(or.alias)
-              val targetname = cleanClassName(or.target.name)
-              s"  type ${typename} = ${targetname}" } } ++
+            objrefs.map { toCodeable(_) } .
+              map { codeable => 
+                s"  type ${codeable.typename} = ${codeable.targetname}" } ++
             Seq("}", "import TypeRefs._")) . mkString("", "\n", "\n"))
     } else {
       None
@@ -223,6 +227,7 @@ object CodeGen {
 
   val mapBareTypes = Map(
     "boolean" ->  "Boolean",
+    "null" ->     "Unit",
     "number" ->   "Double",
     "ref" ->      "Any",      // FIXME - improve decoding
     "string" ->   "String"
