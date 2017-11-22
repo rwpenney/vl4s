@@ -26,9 +26,13 @@ import org.json4s.native.JsonMethods.{ parse => J4Sparse }
 import scala.annotation.tailrec
 
 
+/** Representation of a generic VegaLite datatype */
 sealed abstract class VLtypeDefn(val name: String)
 
+/** Helper methods for manipulating VegaLite datatype descriptions */
 object VLtypeDefn {
+
+  /** Recursively expand children of a set of parent datatypes */
   def expandDependencies(roots: Seq[VLtypeDefn]): Seq[VLtypeDefn] = {
     @tailrec
     def recurse(vltypes: Seq[VLtypeDefn],
@@ -52,23 +56,30 @@ object VLtypeDefn {
   }
 }
 
+/** A simple VegaLite datatype, typically corresponding to a native type */
 case class VLbareType(override val name: String) extends VLtypeDefn(name)
 
+/** A VegaLite datatype representing a homogeneous sequence */
 case class VLarrayOf(vltype: VLtypeDefn) extends VLtypeDefn("[array]")
 
+/** A VegaLite enumerated datatype, typically consisting of multiple strings */
 case class VLenumDefn(override val name: String,
                       values: Seq[String]) extends VLtypeDefn(name)
 
+/** A VegaLite datatype expressing a collection of equivalent options */
 case class VLanyOf(override val name: String,
                    options: Seq[VLtypeDefn]) extends VLtypeDefn(name)
 
+/** A field within a VegaLite operator definition */
 case class VLproperty(name: String,
                       vltype: VLtypeDefn,
                       description: Option[String] = None)
 
+/** Representation of A VegaLite operator */
 case class VLopDefn(override val name: String,
                     properties: Seq[VLproperty]) extends VLtypeDefn(name)
 
+/** Representation of a typename synonym within a set of VegaLite datatypes */
 case class VLobjRef(val alias: String,
                     target: VLtypeDefn) extends VLtypeDefn(alias)
 
