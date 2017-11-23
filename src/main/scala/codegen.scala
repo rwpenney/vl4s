@@ -112,6 +112,14 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
 }
 
 
+class TupleCoder(defn: VLtupleDefn) extends TypeCoder with ParentCoder {
+  def typename = CodeGen.cleanClassName(defn.name)
+
+  def toCode: String = s"sealed trait ${typename} // ${defn.name}"
+  // FIXME - more here
+}
+
+
 class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
 
@@ -200,6 +208,7 @@ object CodeGen {
       case arr: VLarrayOf =>    new ArrayCoder(arr)
       case enum: VLenumDefn =>  new EnumCoder(enum)
       case ao: VLanyOf =>       new AnyOfCoder(ao)
+      case tpl: VLtupleDefn =>  new TupleCoder(tpl)
       case op: VLopDefn =>      new OperatorCoder(op)
       case or: VLobjRef =>      new ObjRefCoder(or)
       case _ =>                 new EmptyCoder

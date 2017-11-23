@@ -43,6 +43,7 @@ object VLtypeDefn {
             case op: VLopDefn =>      (Some(op), Nil)
             case enum: VLenumDefn =>  (Some(enum), Nil)
             case ao: VLanyOf =>       (Some(ao), ao.options)
+            case tpl: VLtupleDefn =>  (Some(tpl), tpl.elements)
             case arr: VLarrayOf =>    (None, Seq(arr.vltype))
             case _ =>                 (None, Nil)
           }
@@ -70,6 +71,10 @@ case class VLenumDefn(override val name: String,
 case class VLanyOf(override val name: String,
                    options: Seq[VLtypeDefn]) extends VLtypeDefn(name)
 
+/** A VegaLite datatype representing a tuple of child types */
+case class VLtupleDefn(override val name: String,
+                       elements: Seq[VLtypeDefn]) extends VLtypeDefn(name)
+
 /** A field within a VegaLite operator definition */
 case class VLproperty(name: String,
                       vltype: VLtypeDefn,
@@ -82,6 +87,7 @@ case class VLopDefn(override val name: String,
 /** Representation of a typename synonym within a set of VegaLite datatypes */
 case class VLobjRef(val alias: String,
                     target: VLtypeDefn) extends VLtypeDefn(alias)
+
 
 /** Representation of all VegaLite types extracted from a JSON schema */
 class VLschema(val types: Seq[VLtypeDefn]) {
@@ -158,9 +164,14 @@ object SchemaParser {
           case JString(x) =>
             VLbareType(x)
           case JArray(tuple) => {
-            println(s"WARNING: partial handling of ${vlTypeName} ~ ${tuple}")
-            // FIXME - more here
-            VLbareType("ref")
+            val tpl = VLtupleDefn(vlTypeName,
+                                  tuple.flatMap {
+                                    case JString(sub) => Some(VLbareType(sub))
+                                    case _ => None })
+            if (tpl.elements.length != tuple.length) {
+              println(s"ERROR: unhandled child types in tuple ${tpl.name}")
+            }
+            tpl
           }
           case _ => {
             println(s"ERROR: Unknown type for ${vlTypeName}")
@@ -239,7 +250,6 @@ object SchemaParser {
               case (obj, idx) => {
                 val subname = s"${name}_${idx}"
                 parseTypeDefn(subname, objToMap(obj))
-              }
-            })
+              } } )
   }
 }
