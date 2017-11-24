@@ -105,23 +105,15 @@ case class VLobjRef(val alias: String,
 
 /** Representation of all VegaLite types extracted from a JSON schema */
 class VLschema(val types: Seq[VLtypeDefn]) {
-  /** Recursively search for all object-references within the schema */
+
+  /** Extract all top-level object references (likely to need typedefs) */
   def objRefs: Seq[VLobjRef] = {
-    @tailrec
-    def recurse(vltypes: Seq[VLtypeDefn],
-                objs: Seq[VLobjRef]): Seq[VLobjRef] = {
-      vltypes match {
-        case (or: VLobjRef) +: tail => recurse(tail, objs :+ or)
-        case (op: VLopDefn) +: tail => {
-          val children = op.properties.map { _.vltype }
-          recurse(children ++ tail, objs)
-        }
-        case _ +: tail => recurse(tail, objs)
-        case _ => objs
+    types.flatMap { x =>
+      x match {
+        case x: VLobjRef => Some(x)
+        case _ => None
       }
     }
-
-    recurse(types, Nil)
   }
 }
 

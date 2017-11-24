@@ -40,7 +40,6 @@ trait ParentCoder {
     val locals = if (recursive) VLtypeDefn.expandDependencies(roots)
                  else roots
 
-    // FIXME - insert actual type definition
     if (locals.nonEmpty) {
       Some(locals.map { CodeGen.toCodeable(_) } .
             map { c => s"${c.toCode()}" } .
@@ -70,10 +69,8 @@ class ArrayCoder(defn: VLarrayOf) extends TypeCoder with ParentCoder {
 
   def typename = CodeGen.cleanClassName(defn.name)
   override def targetname = s"Seq[${itemtype}]"
-  def toCode(recursive: Boolean = true) = {
-    s"// ${defn.name} -> ${itemtype}\n" +
+  def toCode(recursive: Boolean = true) =
     makeHelperClasses(Seq(defn.vltype)).getOrElse("")
-  }
 }
 
 
@@ -105,11 +102,9 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
     val options = defn.options.map { opt => {
       val cdbl = CodeGen.toCodeable(opt)
         s"""|  implicit def from${cdbl.typename}(_arg: ${cdbl.targetname}) = {
-            |     // ${opt.getClass.getName}
             |    new ${typename} { val choice = _arg } }""" . stripMargin
       }
     } . mkString("\n")
-    // FIXME expand any embedded VLopDefn objects
 
     Seq(if (recursive) makeHelperClasses(defn.options) else None,
         Some(s"sealed trait ${typename}"),
@@ -168,7 +163,9 @@ class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
   val targetcoder = CodeGen.toCodeable(defn.target)
   override def targetname = CodeGen.cleanClassName(targetcoder.targetname)
 
-  def toCode(recursive: Boolean = true) = {
+  def toCode(recursive: Boolean = true) = ""
+
+  def toAliasCode(recursive: Boolean = true) = {
     s"""object ${typename} {
     |  type ${typename} = ${targetname}
     |}
@@ -234,9 +231,9 @@ object CodeGen {
 
     if (objrefs.nonEmpty) {
       Some((Seq("object TypeRefs {") ++
-            objrefs.map { toCodeable(_) } .
-              map { codeable => 
-                s"  type ${codeable.typename} = ${codeable.targetname}" } ++
+            objrefs.map { ref =>
+              val codeable = toCodeable(ref)
+              s"  type ${codeable.typename} = ${codeable.targetname}" } ++
             Seq("}", "import TypeRefs._")) . mkString("", "\n", "\n"))
     } else {
       None
