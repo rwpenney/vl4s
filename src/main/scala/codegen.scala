@@ -101,14 +101,15 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
   def toCode(recursive: Boolean = true): String = {
     val options = defn.options.map { opt => {
       val cdbl = CodeGen.toCodeable(opt)
-        s"""|  implicit def from${cdbl.typename}(_arg: ${cdbl.targetname}) = {
-            |    new ${typename} { val choice = _arg } }""" . stripMargin
+        s"""|  implicit def from${cdbl.typename}(_arg: ${cdbl.targetname}) =
+            |    new ${typename} { val choice = _arg }""" . stripMargin
       }
     } . mkString("\n")
+    // FIXME - replace dummy member
 
     Seq(if (recursive) makeHelperClasses(defn.options) else None,
-        Some(s"sealed trait ${typename}"),
-        Some(s"object ${typename}Implicits extends ${typename} {"),
+        Some(s"class ${typename}"),
+        Some(s"object ${typename} {"),
         Some(options),
         Some("}")) . flatten . mkString("", "\n", "\n\n")
   }

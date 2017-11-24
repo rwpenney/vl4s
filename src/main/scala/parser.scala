@@ -171,6 +171,7 @@ object SchemaParser {
           case JString(x) =>
             VLobjRef(vlTypeName, VLbareType(x))
           case JArray(tuple) => {
+            // FIXME - check that this shouldn't be an anyOf
             val tpl = VLtupleDefn(vlTypeName,
                                   tuple.flatMap {
                                     case JString(sub) => Some(VLbareType(sub))

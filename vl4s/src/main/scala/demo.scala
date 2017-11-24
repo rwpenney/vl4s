@@ -13,10 +13,15 @@ object Demo {
     val e0 = AggregateOp.average
     val e1 = ScaleType.bin_linear
 
-
     val plot = TopLevel_FacetedUnitSpec_() .
       background("green") .
-      //data("/dev/null") .
-      encoding(EncodingWithFacet())
+      data(UrlData().url("file:/somewhere/interesting.csv")) .
+      encoding(EncodingWithFacet() .
+        x(PositionFieldDef() .
+          field("x_column") .
+          axis(Axis() .
+            title(("Some title", Unit)))) .
+        y(PositionFieldDef() .
+          field("y_column")))
   }
 }
