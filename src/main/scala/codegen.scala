@@ -25,22 +25,26 @@ import java.io.{ OutputStream, PrintWriter }
 import scala.annotation.tailrec
 
 
+/** Mechanism for converting a VegaLite type into Scala source-code */
 trait TypeCoder {
   def typename: String
   def targetname: String = typename
-  def toCode: String
+  def toCode(recursive: Boolean = true): String
 }
 
 
+/** Helper methods for converting container types into Scala source-code */
 trait ParentCoder {
-  def makeHelperClasses(roots: Seq[VLtypeDefn]): Option[String] = {
-    val locals = VLtypeDefn.expandDependencies(roots)
+  def makeHelperClasses(roots: Seq[VLtypeDefn],
+                        recursive: Boolean = true): Option[String] = {
+    val locals = if (recursive) VLtypeDefn.expandDependencies(roots)
+                 else roots
 
     // FIXME - insert actual type definition
     if (locals.nonEmpty) {
-      Some(locals.map { vltype =>
-        s"trait ${CodeGen.toCodeable(vltype).typename} // ${vltype.getClass.getName}"
-        } . mkString("", "\n", "\n\n"))
+      Some(locals.map { CodeGen.toCodeable(_) } .
+            map { c => s"${c.toCode()}" } .
+            mkString("\n"))
     } else {
       None
     }
@@ -50,29 +54,33 @@ trait ParentCoder {
 
 class EmptyCoder extends TypeCoder {
   def typename = "[EMPTY]"
-  def toCode = ""
+  def toCode(recursive: Boolean = true) = ""
 }
 
 
 class BareCoder(defn: VLbareType) extends TypeCoder {
   def typename = CodeGen.cleanClassName(
                     CodeGen.mapBareTypes.getOrElse(defn.name, defn.name))
-  def toCode = ""
+  def toCode(recursive: Boolean = true) = ""
 }
 
 
-class ArrayCoder(defn: VLarrayOf) extends TypeCoder {
+class ArrayCoder(defn: VLarrayOf) extends TypeCoder with ParentCoder {
   val itemtype = CodeGen.toCodeable(defn.vltype).targetname
 
-  def typename = s"Seq[${itemtype}]"
-  def toCode = ""
+  def typename = CodeGen.cleanClassName(defn.name)
+  override def targetname = s"Seq[${itemtype}]"
+  def toCode(recursive: Boolean = true) = {
+    s"// ${defn.name} -> ${itemtype}\n" +
+    makeHelperClasses(Seq(defn.vltype)).getOrElse("")
+  }
 }
 
 
 class EnumCoder(defn: VLenumDefn) extends TypeCoder {
   def typename = defn.name
 
-  def toCode: String = {
+  def toCode(recursive: Boolean = true): String = {
     val terms = defn.values.map { term =>
       s"""|  final val ${cleanName(term)} = new ${typename} {
           |    val term: String = "${term}" }"""
@@ -93,17 +101,17 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
 
-  def toCode: String = {
+  def toCode(recursive: Boolean = true): String = {
     val options = defn.options.map { opt => {
-      val opttype = CodeGen.toCodeable(opt).targetname
-        s"""|  implicit def from${opttype}(_arg: ${opttype}) = {
+      val cdbl = CodeGen.toCodeable(opt)
+        s"""|  implicit def from${cdbl.typename}(_arg: ${cdbl.targetname}) = {
             |     // ${opt.getClass.getName}
-            |    new ${typename} { val dummy = 1 } }""" . stripMargin
+            |    new ${typename} { val choice = _arg } }""" . stripMargin
       }
     } . mkString("\n")
     // FIXME expand any embedded VLopDefn objects
 
-    Seq(makeHelperClasses(defn.options),
+    Seq(if (recursive) makeHelperClasses(defn.options) else None,
         Some(s"sealed trait ${typename}"),
         Some(s"object ${typename}Implicits extends ${typename} {"),
         Some(options),
@@ -113,10 +121,13 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
 
 
 class TupleCoder(defn: VLtupleDefn) extends TypeCoder with ParentCoder {
-  def typename = CodeGen.cleanClassName(defn.name)
+  val elementnames = defn.elements.map {
+    elt => CodeGen.toCodeable(elt).targetname }
 
-  def toCode: String = s"sealed trait ${typename} // ${defn.name}"
-  // FIXME - more here
+  def typename = CodeGen.cleanClassName(defn.name)
+  override def targetname = elementnames.mkString("(", ", ", ")")
+
+  def toCode(recursive: Boolean = true): String = ""
 }
 
 
@@ -130,7 +141,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
     ( prop.name, CodeGen.mapReserved.getOrElse(prop.name, prop.name) )
   } . toMap
 
-  def toCode: String = {
+  def toCode(recursive: Boolean = true): String = {
     val fields = defn.properties.map { prop =>
       s"    _${fieldNames(prop.name)}: Option[${fieldTypes(prop.name)}] = None"
     } . mkString(",\n")
@@ -141,7 +152,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
             s" = this.copy(_${field} = Some(__arg))"
     } . mkString("", "\n", "\n")
 
-    Seq(makeHelperClasses(defn.properties.map { _.vltype }),
+    Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
         Some(s"case class ${typename}("),
         if (fields.nonEmpty) Some(s"\n${fields}") else None,
         Some(") {\n"),
@@ -154,12 +165,14 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
 
 class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
   def typename = CodeGen.cleanClassName(defn.alias)
-  override def targetname = CodeGen.cleanClassName(defn.target.name)
-  def toCode = {
-    s"""object ${defn.name} {
+  val targetcoder = CodeGen.toCodeable(defn.target)
+  override def targetname = CodeGen.cleanClassName(targetcoder.targetname)
+
+  def toCode(recursive: Boolean = true) = {
+    s"""object ${typename} {
     |  type ${typename} = ${targetname}
     |}
-    |import ${defn.name}._
+    |import ${typename}._
     |""" . stripMargin
   }
 }
@@ -190,7 +203,7 @@ class CodeGen(val stream: OutputStream) {
         case _ => {
           val codeable = CodeGen.toCodeable(vltype)
           pw.print("\n")
-          pw.print(codeable.toCode)
+          pw.print(codeable.toCode(recursive=true))
         }
       }
     }
@@ -215,6 +228,7 @@ object CodeGen {
     }
   }
 
+  /** Generate code for type aliases */
   def makeTypeRefs(schema: VLschema): Option[String] = {
     val objrefs = schema.objRefs
 
@@ -238,7 +252,7 @@ object CodeGen {
     "boolean" ->  "Boolean",
     "null" ->     "Unit",
     "number" ->   "Double",
-    "ref" ->      "Any",      // FIXME - improve decoding
+    "object" ->   "Any",
     "string" ->   "String"
   )
 

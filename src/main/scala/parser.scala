@@ -29,6 +29,10 @@ import scala.annotation.tailrec
 /** Representation of a generic VegaLite datatype */
 sealed abstract class VLtypeDefn(val name: String)
 
+trait VLtypeContainer {
+  def expandContents: (Option[VLtypeDefn], Seq[VLtypeDefn])
+}
+
 /** Helper methods for manipulating VegaLite datatype descriptions */
 object VLtypeDefn {
 
@@ -40,12 +44,8 @@ object VLtypeDefn {
       vltypes match {
         case head :: tail => {
           val (loc, children) = head match {
-            case op: VLopDefn =>      (Some(op), Nil)
-            case enum: VLenumDefn =>  (Some(enum), Nil)
-            case ao: VLanyOf =>       (Some(ao), ao.options)
-            case tpl: VLtupleDefn =>  (Some(tpl), tpl.elements)
-            case arr: VLarrayOf =>    (None, Seq(arr.vltype))
-            case _ =>                 (None, Nil)
+            case ctr: VLtypeContainer =>  ctr.expandContents
+            case _ =>                     (None, Nil)
           }
           recurse(children ++ tail, locals :+ loc)
         }
@@ -61,19 +61,31 @@ object VLtypeDefn {
 case class VLbareType(override val name: String) extends VLtypeDefn(name)
 
 /** A VegaLite datatype representing a homogeneous sequence */
-case class VLarrayOf(vltype: VLtypeDefn) extends VLtypeDefn("[array]")
+case class VLarrayOf(override val name: String, vltype: VLtypeDefn)
+    extends VLtypeDefn(name) with VLtypeContainer {
+  def expandContents() = (None, Seq(vltype))
+}
 
 /** A VegaLite enumerated datatype, typically consisting of multiple strings */
 case class VLenumDefn(override val name: String,
                       values: Seq[String]) extends VLtypeDefn(name)
+    with VLtypeContainer {
+  def expandContents() = (Some(this), Nil)
+}
 
 /** A VegaLite datatype expressing a collection of equivalent options */
 case class VLanyOf(override val name: String,
-                   options: Seq[VLtypeDefn]) extends VLtypeDefn(name)
+                   options: Seq[VLtypeDefn])
+    extends VLtypeDefn(name) with VLtypeContainer {
+  def expandContents() = (Some(this), options)
+}
 
 /** A VegaLite datatype representing a tuple of child types */
 case class VLtupleDefn(override val name: String,
-                       elements: Seq[VLtypeDefn]) extends VLtypeDefn(name)
+                       elements: Seq[VLtypeDefn])
+    extends VLtypeDefn(name) with VLtypeContainer {
+  def expandContents() = (Some(this), elements)
+}
 
 /** A field within a VegaLite operator definition */
 case class VLproperty(name: String,
@@ -81,8 +93,10 @@ case class VLproperty(name: String,
                       description: Option[String] = None)
 
 /** Representation of A VegaLite operator */
-case class VLopDefn(override val name: String,
-                    properties: Seq[VLproperty]) extends VLtypeDefn(name)
+case class VLopDefn(override val name: String, properties: Seq[VLproperty])
+    extends VLtypeDefn(name) with VLtypeContainer {
+  def expandContents() = (Some(this), Nil)
+}
 
 /** Representation of a typename synonym within a set of VegaLite datatypes */
 case class VLobjRef(val alias: String,
@@ -152,7 +166,8 @@ object SchemaParser {
       case _ if spec.contains("type") => {
         spec("type") match {
           case JString("array") =>
-            VLarrayOf(parseTypeDefn(vlTypeName + "_array",
+            VLarrayOf(vlTypeName,
+                      parseTypeDefn(vlTypeName + "_elts",
                                     objToMap(spec("items"))))
           case JString("object") => {
             spec.get("additionalProperties") match {
@@ -162,7 +177,7 @@ object SchemaParser {
             }
           }
           case JString(x) =>
-            VLbareType(x)
+            VLobjRef(vlTypeName, VLbareType(x))
           case JArray(tuple) => {
             val tpl = VLtupleDefn(vlTypeName,
                                   tuple.flatMap {

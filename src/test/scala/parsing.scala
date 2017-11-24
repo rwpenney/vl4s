@@ -28,7 +28,7 @@ class Parser extends FlatSpec {
           "Type0": { "type": "number" } }
       }""")
 
-    val Seq(VLbareType(t0)) = typedefs
+    val Seq(VLobjRef(defn, VLbareType(t0))) = typedefs
 
     assert(t0 == "number")
   }
@@ -62,12 +62,18 @@ class Parser extends FlatSpec {
 
     assert(typedefs.length == 7)
 
-    typeCheck[VLbareType](typedefs(0)) {
-      bare => assert(bare.name == "string")
+    typeCheck[VLobjRef](typedefs(0)) { ref =>
+      typeCheck[VLbareType](ref.target) {
+        bare => assert(bare.name == "string")
+      }
     }
 
-    typeCheck[VLarrayOf](typedefs(1)) {
-      arr => assert(arr.vltype.name == "number")
+    typeCheck[VLarrayOf](typedefs(1)) { arr =>
+      typeCheck[VLobjRef](arr.vltype) { ref =>
+        typeCheck[VLbareType](ref.target) {
+          bare => assert(bare.name == "number")
+        }
+      }
     }
 
     typeCheck[VLenumDefn](typedefs(2)) { enum =>
@@ -82,8 +88,10 @@ class Parser extends FlatSpec {
         assert(ref.target.name == "SomeAny")
       }
 
-      typeCheck[VLbareType](ao.options(1)) {
-        bare => assert(bare.name == "boolean")
+      typeCheck[VLobjRef](ao.options(1)) { ref =>
+        typeCheck[VLbareType](ref.target) {
+          bare => assert(bare.name == "boolean")
+        }
       }
     }
 
