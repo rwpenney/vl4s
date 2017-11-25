@@ -5,6 +5,9 @@
 
 package uk.rwpenney.vl4s.demo
 
+
+import org.json4s._
+import org.json4s.native.JsonMethods.{ pretty, render }
 import uk.rwpenney.vl4s._
 import uk.rwpenney.vl4s.ShortcutImplicits._
 
@@ -29,5 +32,8 @@ object Demo {
             nice(true))))
 
     println(s"${plot}")
+
+    val json = plot.toJValue
+    println(pretty(render(json)))
   }
 }

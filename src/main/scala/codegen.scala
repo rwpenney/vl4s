@@ -140,17 +140,14 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
   } . toMap
 
   def toCode(recursive: Boolean = true): String = {
-    val fields = defn.properties.map { prop =>
-      s"    _${fieldNames(prop.name)}: Option[${fieldTypes(prop.name)}] = None"
-    } . mkString(",\n")
-
     val modifiers = defn.properties.map { prop =>
       makePropMethod(prop) } .mkString("\n")
 
     Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
-        Some(s"case class ${typename}("),
-        if (fields.nonEmpty) Some(s"\n${fields}") else None,
-        Some(") {\n"),
+        Some(s"case class ${typename}" +
+              "(_properties: Map[String, Any] = Map.empty)" +
+              "\n    extends JsonExporter {\n"),
+        Some(s"  def toJValue: JValue = dumpMap(_properties)\n"),
         if (modifiers.nonEmpty) Some(modifiers) else None,
         Some("}\n\n")) . flatten . mkString("")
   }
@@ -163,10 +160,11 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
       case None => None
     }
 
-    Seq(doc,
-        Some(s"  def ${field}(__arg: ${argtype}): ${typename} =" +
-             s"this.copy(_${field} = Some(__arg))")) .
-      flatten .
+    val code = s"""|  def ${field}(__arg: ${argtype}): ${typename} =
+                   |    this.copy(_properties = this._properties +
+                   |               ("${field}" → __arg))""" . stripMargin
+
+    Seq(doc, Some(code)) . flatten .
       mkString("", "\n", "\n")
   }
 }
@@ -199,6 +197,7 @@ class CodeGen(val stream: OutputStream) {
     pw.print("""
              |package uk.rwpenney.vl4s
              |
+             |import org.json4s.JValue
              |import scala.language.implicitConversions
              |
              |""" . stripMargin)
