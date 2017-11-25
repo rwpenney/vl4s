@@ -14,9 +14,11 @@ import uk.rwpenney.vl4s.ShortcutImplicits._
 
 object Demo {
   def main(args: Array[String]) {
-    val e0 = AggregateOp.average
-    val e1 = ScaleType.bin_linear
+    simple()
+    simple2()
+  }
 
+  def simple() {
     val plot = SimpleSpec() .
       background("green") .
       data("file:/somewhere/interesting.csv") .
@@ -32,6 +34,24 @@ object Demo {
             nice(true))))
 
     println(s"${plot}")
+
+    val json = plot.toJValue
+    println(pretty(render(json)))
+  }
+
+  def simple2() {
+    val plot = SimpleSpec() .
+      data("file:apt-package-sizes.tsv") .
+      encoding(EncodingWithFacet() .
+        x(PositionFieldDef() .
+          field("logSize") .
+          axis(Axis())) .
+        y(PositionFieldDef() .
+          field("*") .
+          axis(Axis())) .
+        color(MarkPropFieldDefWithCondition() .
+          field("simpleSection") .
+          vtype(Type.nominal)))
 
     val json = plot.toJValue
     println(pretty(render(json)))

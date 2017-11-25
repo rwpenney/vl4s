@@ -81,15 +81,16 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 
   def toCode(recursive: Boolean = true): String = {
     val terms = defn.values.map { term =>
-      s"""|  final val ${cleanName(term)} = new ${typename} {
-          |    val term: String = "${term}" }"""
+      s"""|  final val ${cleanName(term)} = new ${typename}(term = "${term}")"""
     } . mkString("\n")
 
-    s"""sealed trait ${typename}
-    |object ${typename} extends ${typename} {
-    ${terms}
-    |}
-    |""" . stripMargin
+    s"""|sealed class ${typename}(val term: String) extends JsonExporter {
+        |  def toJValue = JString(term)
+        |}
+        |object ${typename} {
+        ${terms}
+        |}
+        |""" . stripMargin
   }
 
   def cleanName(orig: String): String =
@@ -198,7 +199,7 @@ class CodeGen(val stream: OutputStream) {
     pw.print("""
              |package uk.rwpenney.vl4s
              |
-             |import org.json4s.JValue
+             |import org.json4s.{ JString, JValue }
              |import scala.language.implicitConversions
              |
              |""" . stripMargin)

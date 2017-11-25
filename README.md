@@ -27,3 +27,55 @@ and consists of two projects:
   and eventually allow creation of VegaLite JSON documents.
 
 (The tool is currently at a very early stage of development.)
+
+
+## Example
+
+```scala
+import org.json4s._
+import org.json4s.native.JsonMethods.{ pretty, render }
+import uk.rwpenney.vl4s._
+import uk.rwpenney.vl4s.ShortcutImplicits._
+
+val plot = SimpleSpec() .
+  background("green") .
+  data("file:/somewhere/interesting.csv") .
+  encoding(EncodingWithFacet() .
+    x(PositionFieldDef() .
+      field("x_column") .
+      axis(Axis() .
+        title("Some title"))) .
+    y(PositionFieldDef() .
+      field("y_column")
+      bin(BinParams() .
+        maxbins(50) .
+        nice(true))))
+
+val json = plot.toJValue
+println(pretty(render(json)))
+```
+will create:
+```json
+{
+  "background":"green",
+  "data":{
+    "url":"file:/somewhere/interesting.csv"
+  },
+  "encoding":{
+    "x":{
+      "field":"x_column",
+      "axis":{
+        "title":"Some title"
+      }
+    },
+    "y":{
+      "field":"y_column",
+      "bin":{
+        "maxbins":50.0,
+        "nice":true
+      }
+    }
+  }
+}
+
+```
