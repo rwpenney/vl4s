@@ -6,6 +6,7 @@
 package uk.rwpenney.vl4s.demo
 
 import uk.rwpenney.vl4s._
+import uk.rwpenney.vl4s.ShortcutImplicits._
 
 
 object Demo {
@@ -15,12 +16,12 @@ object Demo {
 
     val plot = TopLevel_FacetedUnitSpec_() .
       background("green") .
-      data(UrlData().url("file:/somewhere/interesting.csv")) .
+      data("file:/somewhere/interesting.csv") .
       encoding(EncodingWithFacet() .
         x(PositionFieldDef() .
           field("x_column") .
           axis(Axis() .
-            title(("Some title", Unit)))) .
+            title("Some title"))) .
         y(PositionFieldDef() .
           field("y_column")))
   }

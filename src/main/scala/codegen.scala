@@ -143,10 +143,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
     } . mkString(",\n")
 
     val modifiers = defn.properties.map { prop =>
-      val field = fieldNames(prop.name)
-      s"  def ${field}(__arg: ${fieldTypes(prop.name)}): ${typename}" +
-            s" = this.copy(_${field} = Some(__arg))"
-    } . mkString("", "\n", "\n")
+      makePropMethod(prop) } .mkString("")
 
     Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
         Some(s"case class ${typename}("),
@@ -155,6 +152,21 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
         if (modifiers.nonEmpty) Some(modifiers) else None,
         Some("}\n\n")) . flatten . mkString("")
     // FIXME - extract description as scaladoc comment
+  }
+
+  def makePropMethod(prop: VLproperty): String = {
+    val field = fieldNames(prop.name)
+    val argtype = fieldTypes(prop.name)
+    val doc = prop.description match {
+      case Some(desc) => Some(s"  /** ${desc} */")
+      case None => None
+    }
+
+    Seq(doc,
+        Some(s"  def ${field}(__arg: ${argtype}): ${typename} =" +
+             s"this.copy(_${field} = Some(__arg))")) .
+      flatten .
+      mkString("", "\n", "\n")
   }
 }
 

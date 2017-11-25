@@ -170,16 +170,15 @@ object SchemaParser {
           }
           case JString(x) =>
             VLobjRef(vlTypeName, VLbareType(x))
-          case JArray(tuple) => {
-            // FIXME - check that this shouldn't be an anyOf
-            val tpl = VLtupleDefn(vlTypeName,
-                                  tuple.flatMap {
-                                    case JString(sub) => Some(VLbareType(sub))
-                                    case _ => None })
-            if (tpl.elements.length != tuple.length) {
-              println(s"ERROR: unhandled child types in tuple ${tpl.name}")
+          case JArray(arr) => {
+            val ao = VLanyOf(vlTypeName,
+                             arr.flatMap {
+                                case JString(sub) => Some(VLbareType(sub))
+                                case _ => None })
+            if (ao.options.length != arr.length) {
+              println(s"ERROR: unhandled child types in plain anyOf ${ao.name}")
             }
-            tpl
+            ao
           }
           case _ => {
             println(s"ERROR: Unknown type for ${vlTypeName}")
