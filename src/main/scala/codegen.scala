@@ -104,13 +104,14 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
     val options = defn.options.map { opt => {
       val cdbl = CodeGen.toCodeable(opt)
         s"""|  implicit def from${cdbl.typename}(_arg: ${cdbl.targetname}) =
-            |    new ${typename} { val choice = _arg }""" . stripMargin
+            |    new ${typename}(choice = _arg)""" . stripMargin
       }
     } . mkString("\n")
     // FIXME - replace dummy member
 
     Seq(if (recursive) makeHelperClasses(defn.options) else None,
-        Some(s"class ${typename}"),
+        Some(s"""|class ${typename}(val choice: Any) extends JsonExporter {
+                 |  def toJValue = exportTerm(choice) }""" . stripMargin),
         Some(s"object ${typename} {"),
         Some(options),
         Some("}")) . flatten . mkString("", "\n", "\n\n")
@@ -147,7 +148,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
         Some(s"case class ${typename}" +
               "(_properties: Map[String, Any] = Map.empty)" +
               "\n    extends JsonExporter {\n"),
-        Some(s"  def toJValue: JValue = dumpMap(_properties)\n"),
+        Some(s"  def toJValue: JValue = exportMap(_properties)\n"),
         if (modifiers.nonEmpty) Some(modifiers) else None,
         Some("}\n\n")) . flatten . mkString("")
   }
