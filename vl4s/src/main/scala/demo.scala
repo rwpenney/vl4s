@@ -14,7 +14,7 @@ object Demo {
     val e0 = AggregateOp.average
     val e1 = ScaleType.bin_linear
 
-    val plot = TopLevel_FacetedUnitSpec_() .
+    val plot = SimpleSpec() .
       background("green") .
       data("file:/somewhere/interesting.csv") .
       encoding(EncodingWithFacet() .
@@ -23,6 +23,11 @@ object Demo {
           axis(Axis() .
             title("Some title"))) .
         y(PositionFieldDef() .
-          field("y_column")))
+          field("y_column")
+          bin(BinParams() .
+            maxbins(50) .
+            nice(true))))
+
+    println(s"${plot}")
   }
 }

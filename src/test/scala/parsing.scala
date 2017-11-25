@@ -21,6 +21,7 @@ object Helpers {
 }
 
 
+/** Unit-tests for SchemaParser */
 class Parser extends FlatSpec {
   "The SchemaParser" should "handle simple bare types" in {
     val typedefs = Helpers.parseJson("""{
@@ -95,18 +96,18 @@ class Parser extends FlatSpec {
       }
     }
 
-    typeCheck[VLtupleDefn](typedefs(4)) { tpl =>
-      assert(tpl.elements.length == 3)
+    typeCheck[VLanyOf](typedefs(4)) { ao =>
+      assert(ao.options.length == 3)
 
-      typeCheck[VLbareType](tpl.elements(0)) {
+      typeCheck[VLbareType](ao.options(0)) {
         bare => assert(bare.name == "boolean")
       }
 
-      typeCheck[VLbareType](tpl.elements(1)) {
+      typeCheck[VLbareType](ao.options(1)) {
         bare => assert(bare.name == "number")
       }
 
-      typeCheck[VLbareType](tpl.elements(2)) {
+      typeCheck[VLbareType](ao.options(2)) {
         bare => assert(bare.name == "string")
       }
     }

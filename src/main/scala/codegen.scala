@@ -42,7 +42,9 @@ trait ParentCoder {
 
     if (locals.nonEmpty) {
       Some(locals.map { CodeGen.toCodeable(_) } .
-            map { c => s"${c.toCode()}" } .
+            flatMap { c =>
+              val codetext = c.toCode()
+              if (codetext.nonEmpty) Some(codetext) else None } .
             mkString("\n"))
     } else {
       None
@@ -143,7 +145,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
     } . mkString(",\n")
 
     val modifiers = defn.properties.map { prop =>
-      makePropMethod(prop) } .mkString("")
+      makePropMethod(prop) } .mkString("\n")
 
     Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
         Some(s"case class ${typename}("),
@@ -151,7 +153,6 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
         Some(") {\n"),
         if (modifiers.nonEmpty) Some(modifiers) else None,
         Some("}\n\n")) . flatten . mkString("")
-    // FIXME - extract description as scaladoc comment
   }
 
   def makePropMethod(prop: VLproperty): String = {
@@ -209,11 +210,14 @@ class CodeGen(val stream: OutputStream) {
 
     schema.types.foreach { vltype =>
       vltype match {
-        case or: VLobjRef =>
+        case or: VLobjRef =>  // top-level references handled by makeTypeRefs()
         case _ => {
           val codeable = CodeGen.toCodeable(vltype)
-          pw.print("\n")
-          pw.print(codeable.toCode(recursive=true))
+          val codetext = codeable.toCode(recursive=true)
+
+          if (codetext.nonEmpty) {
+            pw.print(s"\n${codetext}")
+          }
         }
       }
     }
