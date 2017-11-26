@@ -7,7 +7,7 @@ lazy val root = (project in file(".")) .
   settings(commonSettings: _*) .
   settings(
     name := "vl4s-generator",
-    version := "0.1.1-SNAPSHOT",
+    version := "0.1.2-SNAPSHOT",
     scalaVersion:= "2.12.4",
     scalacOptions ++= Seq("-deprecation", "-feature"),
     libraryDependencies ++= Seq(

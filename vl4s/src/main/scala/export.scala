@@ -3,6 +3,13 @@
  *  RW Penney, November 2017
  */
 
+//  Copyright (C) 2017, RW Penney
+//  This file is part of VL4S.
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package uk.rwpenney.vl4s
 
 import org.json4s.{ JBool, JDouble, JField, JInt, JObject, JString, JValue }
