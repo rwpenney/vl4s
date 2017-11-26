@@ -27,8 +27,13 @@ import scala.annotation.tailrec
 
 /** Mechanism for converting a VegaLite type into Scala source-code */
 trait TypeCoder {
+  /** The Scala typename */
   def typename: String
+
+  /** The Scala typename of any underlying type to which this refers */
   def targetname: String = typename
+
+  /** Generate source-code for this type */
   def toCode(recursive: Boolean = true): String
 }
 
@@ -131,6 +136,7 @@ class TupleCoder(defn: VLtupleDefn) extends TypeCoder with ParentCoder {
 }
 
 
+/** Code-generator for VegaLite operators */
 class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
 
@@ -142,18 +148,30 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
   } . toMap
 
   def toCode(recursive: Boolean = true): String = {
-    val modifiers = defn.properties.map { prop =>
+    val markers = makeMarkers()
+    val propsetters = defn.properties.map { prop =>
       makePropMethod(prop) } .mkString("\n")
 
     Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
         Some(s"case class ${typename}" +
               "(_properties: Map[String, Any] = Map.empty)" +
-              "\n    extends JsonExporter {\n"),
+              s"\n    extends JsonExporter ${markers}{\n"),
         Some(s"  def toJValue: JValue = exportMap(_properties)\n"),
-        if (modifiers.nonEmpty) Some(modifiers) else None,
+        if (propsetters.nonEmpty) Some(propsetters) else None,
         Some("}\n\n")) . flatten . mkString("")
   }
 
+  /** Prepare "with" annotations for class definition */
+  def makeMarkers(): String = {
+    CodeGen.markerInterfaces.flatMap { case (regexp, marker) =>
+      regexp.findFirstIn(defn.name) match {
+        case Some(_) => Some(s"with ${marker} ")
+        case None =>    None
+      }
+    } . mkString("")
+  }
+
+  /** Create setter method definition for single property */
   def makePropMethod(prop: VLproperty): String = {
     val field = fieldNames(prop.name)
     val argtype = fieldTypes(prop.name)
@@ -204,6 +222,11 @@ class CodeGen(val stream: OutputStream) {
              |
              |""" . stripMargin)
 
+    pw.print(CodeGen.markerInterfaces.map {
+                case (re, mrk) => s"trait ${mrk} extends JsonExporter" } .
+             mkString("", "\n", "\n\n"))
+    // FIXME - allow for marker traits not extending JsonExporter
+
     CodeGen.makeTypeRefs(schema) match {
       case Some(typerefs) => pw.print(typerefs)
       case None =>
@@ -230,6 +253,7 @@ class CodeGen(val stream: OutputStream) {
 
 
 object CodeGen {
+  /** Convert VegaLite type descriptor into source-code generator object */
   def toCodeable(vltype: VLtypeDefn): TypeCoder = {
     vltype match {
       case bare: VLbareType =>  new BareCoder(bare)
@@ -258,11 +282,12 @@ object CodeGen {
     }
   }
 
-  // Conversion for VL properties which class with Scala reserved words
+  /** Conversion for VL properties which clash with Scala reserved words */
   val mapReserved = Map(
     "type" -> "vtype"
   )
 
+  /** Conversion between VL raw types and Scala native types */
   val mapBareTypes = Map(
     "boolean" ->  "Boolean",
     "null" ->     "Unit",
@@ -271,10 +296,15 @@ object CodeGen {
     "string" ->   "String"
   )
 
+  /** Convert VegaLite typename into valid Scala identifier */
   def cleanClassName(orig: String): String =
     orig.map {
       case '<' => '_'
       case '>' => '_'
       case c =>   c
     }
+
+  val markerInterfaces = Map(
+    raw"^TopLevel".r -> "TopLevelSpec"
+  )
 }

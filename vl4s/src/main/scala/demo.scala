@@ -14,12 +14,18 @@ import uk.rwpenney.vl4s.ShortcutImplicits._
 
 object Demo {
   def main(args: Array[String]) {
-    simple()
-    simple2()
+    Seq(simple(), simple2()).map { spec =>
+      println(s"Spec: ${spec} =>\n")
+
+      val json = spec.toJValue
+
+      println(pretty(render(json)))
+      println("\n")
+    }
   }
 
-  def simple() {
-    val plot = SimpleSpec() .
+  def simple(): TopLevelSpec =
+    SimpleSpec() .
       background("green") .
       data("file:/somewhere/interesting.csv") .
       encoding(EncodingWithFacet() .
@@ -33,14 +39,8 @@ object Demo {
             maxbins(50) .
             nice(true))))
 
-    println(s"${plot}")
-
-    val json = plot.toJValue
-    println(pretty(render(json)))
-  }
-
-  def simple2() {
-    val plot = SimpleSpec() .
+  def simple2(): TopLevelSpec =
+    SimpleSpec() .
       data("file:apt-package-sizes.tsv") .
       encoding(EncodingWithFacet() .
         x(PositionFieldDef() .
@@ -52,8 +52,4 @@ object Demo {
         color(MarkPropFieldDefWithCondition() .
           field("simpleSection") .
           vtype(Type.nominal)))
-
-    val json = plot.toJValue
-    println(pretty(render(json)))
-  }
 }
