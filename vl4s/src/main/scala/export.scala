@@ -12,7 +12,8 @@
 
 package uk.rwpenney.vl4s
 
-import org.json4s.{ JBool, JDouble, JField, JInt, JObject, JString, JValue }
+import org.json4s.{ JArray, JBool, JDouble, JField, JInt,
+                    JObject, JString, JValue }
 
 
 trait JsonExporter {
@@ -25,6 +26,7 @@ trait JsonExporter {
       case i: Int =>            JInt(i)
       case d: Double =>         JDouble(d)
       case s: String =>         JString(s)
+      case s: Seq[Any] =>       JArray(s.map{ exportTerm(_) }.toList)
       case _ =>                 JString(term.toString)
     }
   }

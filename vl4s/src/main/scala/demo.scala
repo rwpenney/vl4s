@@ -42,14 +42,25 @@ object Demo {
   def simple2(): TopLevelSpec =
     SimpleSpec() .
       data("file:apt-package-sizes.tsv") .
+      mark(Mark.bar) .
       encoding(EncodingWithFacet() .
         x(PositionFieldDef() .
+          axis(Axis() .
+            title("log(size)")) .
           field("logSize") .
-          axis(Axis())) .
+          vtype(Type.quantitative) .
+          bin(BinParams() .
+            maxbins(20))) .
         y(PositionFieldDef() .
+          axis(Axis() .
+            title("count")) .
           field("*") .
-          axis(Axis())) .
-        color(MarkPropFieldDefWithCondition() .
-          field("simpleSection") .
-          vtype(Type.nominal)))
+          vtype(Type.quantitative) .
+          aggregate(AggregateOp.count)) .
+        color(MarkPropValueDefWithCondition() .
+          condition(Conditional_MarkPropFieldDef_() .
+            field("simpleSection") .
+            selection("chosen") .
+            vtype(Type.nominal)) .
+          value("grey")))
 }

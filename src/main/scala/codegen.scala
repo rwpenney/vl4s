@@ -134,7 +134,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
   val fieldTypes = defn.properties.map { prop =>
     ( prop.name, CodeGen.toCodeable(prop.vltype).targetname )
   } . toMap
-  val fieldNames = defn.properties.map { prop =>
+  val methodNames = defn.properties.map { prop =>
     ( prop.name, CodeGen.mapReserved.getOrElse(prop.name, prop.name) )
   } . toMap
 
@@ -164,16 +164,16 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
 
   /** Create setter method definition for single property */
   def makePropMethod(prop: VLproperty): String = {
-    val field = fieldNames(prop.name)
+    val method = methodNames(prop.name)
     val argtype = fieldTypes(prop.name)
     val doc = prop.description match {
       case Some(desc) => Some(s"  /** ${desc} */")
       case None => None
     }
 
-    val code = s"""|  def ${field}(__arg: ${argtype}): ${typename} =
+    val code = s"""|  def ${method}(__arg: ${argtype}): ${typename} =
                    |    this.copy(_properties = this._properties +
-                   |               ("${field}" → __arg))""" . stripMargin
+                   |               ("${prop.name}" → __arg))""" . stripMargin
 
     Seq(doc, Some(code)) . flatten .
       mkString("", "\n", "\n")
