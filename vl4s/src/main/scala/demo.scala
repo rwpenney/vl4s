@@ -44,23 +44,26 @@ object Demo {
       data("file:apt-package-sizes.tsv") .
       mark(Mark.bar) .
       encoding(EncodingWithFacet() .
-        x(PositionFieldDef() .
-          axis(Axis() .
-            title("log(size)")) .
-          field("logSize") .
-          vtype(Type.quantitative) .
-          bin(BinParams() .
-            maxbins(20))) .
-        y(PositionFieldDef() .
-          axis(Axis() .
-            title("count")) .
-          field("*") .
-          vtype(Type.quantitative) .
-          aggregate(AggregateOp.count)) .
-        color(MarkPropValueDefWithCondition() .
-          condition(Conditional_MarkPropFieldDef_() .
-            field("simpleSection") .
-            selection("chosen") .
-            vtype(Type.nominal)) .
-          value("grey")))
+        >> { enc => enc .
+          x(enc.XYaxisDef .
+            axis(Axis() .
+              title("log(size)")) .
+            field("logSize") .
+            vtype(Type.quantitative) .
+            bin(BinParams() .
+              maxbins(20))) .
+          y(enc.XYaxisDef .
+            axis(Axis() .
+              title("count")) .
+            field("*") .
+            vtype(Type.quantitative) .
+            aggregate(AggregateOp.count)) .
+          color(MarkPropValueDefWithCondition() .
+            condition(Conditional_MarkPropFieldDef_() .
+              field("simpleSection") .
+              selection("chosen") .
+              vtype(Type.nominal)) .
+            value("grey"))
+        }
+      )
 }

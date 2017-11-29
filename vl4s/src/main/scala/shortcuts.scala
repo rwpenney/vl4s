@@ -31,3 +31,9 @@ object ShortcutImplicits {
     }
   }
 }
+
+
+/** Type shorthands for use within axis encodings (e.g. EncodingWithFacet) */
+trait EncodingShorthands {
+  def XYaxisDef = PositionFieldDef()
+}

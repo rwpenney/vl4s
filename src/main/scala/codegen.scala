@@ -146,15 +146,18 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
     Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
         Some(s"case class ${typename}" +
               "(_properties: Map[String, Any] = Map.empty)" +
-              s"\n    extends JsonExporter ${markers}{\n"),
-        Some(s"  def toJValue: JValue = exportMap(_properties)\n"),
+              s"\n    extends JsonExporter ${markers}{"),
+        Some(s"""|  def toJValue: JValue = exportMap(_properties)
+                 |  def >>(fn: ${typename} => ${typename}) = fn(this)"""
+              . stripMargin),
         if (propsetters.nonEmpty) Some(propsetters) else None,
-        Some("}\n\n")) . flatten . mkString("")
+        Some("}")) . flatten . mkString("", "\n", "\n\n")
   }
 
   /** Prepare "with" annotations for class definition */
   def makeMarkers(): String = {
-    CodeGen.markerInterfaces.flatMap { case (regexp, marker) =>
+    val traitOptions = CodeGen.markerInterfaces ++ CodeGen.shorthandInterfaces
+    traitOptions.flatMap { case (regexp, marker) =>
       regexp.findFirstIn(defn.name) match {
         case Some(_) => Some(s"with ${marker} ")
         case None =>    None
@@ -295,7 +298,13 @@ object CodeGen {
       case c =>   c
     }
 
+  /** Marker traits to apply to VegaLite operators based on classname regexps */
   val markerInterfaces = Map(
     raw"^TopLevel".r -> "TopLevelSpec"
+  )
+
+  /** Mixins to apply to VegaLite operators based on classname regexps */
+  val shorthandInterfaces = Map(
+    raw"^Encoding[A-Za-z]*".r -> "EncodingShorthands"
   )
 }
