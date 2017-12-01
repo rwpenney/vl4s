@@ -36,3 +36,33 @@ trait JsonExporter {
       case (field, setting) => JField(field, exportTerm(setting)) })
   }
 }
+
+
+object ExportImplicits {
+  implicit class HtmlExporter(spec: TopLevelSpec) {
+    import org.json4s.native.JsonMethods.{ pretty, render }
+
+    val jsLibraries = Seq(
+      "https://cdnjs.cloudflare.com/ajax/libs/vega/3.0.7/vega.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/vega-lite/2.0.1/vega-lite.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/vega-embed/3.0.0-rc7/vega-embed.js")
+
+    def jsImports(indent: String = ""): String = {
+      jsLibraries.map {
+        url => s"""${indent}<script src="${url}"></script>""" } .
+      mkString("\n")
+    }
+
+    def htmlDiv(ident: String, jsvarname: String = "vegaSpec"): String = {
+      val jsonSpec = pretty(render(spec.toJValue))
+
+      s"""|<div id="${ident}"></div>
+          |<script type="text/javascript">
+          |var ${jsvarname}_opts = { "mode": "vega-lite", "renderer": "svg",
+          |  "actions": { "editor": false, "export": true, "source": false } }
+          |var ${jsvarname} = ${jsonSpec}
+          |vegaEmbed("#${ident}", ${jsvarname}, ${jsvarname}_opts);
+          |</script>""" . stripMargin
+    }
+  }
+}

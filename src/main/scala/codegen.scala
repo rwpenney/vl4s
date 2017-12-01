@@ -156,8 +156,7 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
 
   /** Prepare "with" annotations for class definition */
   def makeMarkers(): String = {
-    val traitOptions = CodeGen.markerInterfaces ++ CodeGen.shorthandInterfaces
-    traitOptions.flatMap { case (regexp, marker) =>
+    CodeGen.allMixins.flatMap { case (regexp, marker) =>
       regexp.findFirstIn(defn.name) match {
         case Some(_) => Some(s"with ${marker} ")
         case None =>    None
@@ -307,4 +306,6 @@ object CodeGen {
   val shorthandInterfaces = Map(
     raw"^Encoding[A-Za-z]*".r -> "EncodingShorthands"
   )
+
+  val allMixins = markerInterfaces ++ shorthandInterfaces
 }

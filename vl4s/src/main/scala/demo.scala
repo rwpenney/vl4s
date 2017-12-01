@@ -9,6 +9,7 @@ package uk.rwpenney.vl4s.demo
 import org.json4s._
 import org.json4s.native.JsonMethods.{ pretty, render }
 import uk.rwpenney.vl4s._
+import uk.rwpenney.vl4s.ExportImplicits._
 import uk.rwpenney.vl4s.ShortcutImplicits._
 
 
@@ -22,6 +23,8 @@ object Demo {
       println(pretty(render(json)))
       println("\n")
     }
+
+    webpage()
   }
 
   def simple(): TopLevelSpec =
@@ -42,6 +45,7 @@ object Demo {
   def simple2(): TopLevelSpec =
     SimpleSpec() .
       data("file:apt-package-sizes.tsv") .
+      //selection(SelectionDef()) .   // FIXME - added selection definition
       mark(Mark.bar) .
       encoding(EncodingWithFacet() .
         >> { enc => enc .
@@ -66,4 +70,22 @@ object Demo {
             value("grey"))
         }
       )
+
+  def webpage() {
+    val spec = simple2()
+
+    println(s"""|<html>
+                |<head><title>Simple VL4S demo</title>
+                |  <style type="text/css">
+                |    body { background-color: white; }
+                |    div.vl4s_embed { height: 400px; width: 600px; }
+                |  </style>
+                |${spec.jsImports(indent="  ")}
+                |</head>
+                |<body>
+                |<h1>A trivial VL4S demonstration</h1>
+                |${spec.htmlDiv(ident="vl4s_embed")}
+                |</body>
+                |</html>""" . stripMargin)
+  }
 }
