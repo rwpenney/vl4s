@@ -45,7 +45,10 @@ object Demo {
   def simple2(): TopLevelSpec =
     SimpleSpec() .
       data("file:apt-package-sizes.tsv") .
-      //selection(SelectionDef()) .   // FIXME - added selection definition
+      selection(
+        Map("chosen" -> SingleSelection() .
+                          encodings(Seq(SingleDefChannel.color)) .
+                          vtype(SingleSelection_type.single))) .
       mark(Mark.bar) .
       encoding(EncodingWithFacet() .
         >> { enc => enc .

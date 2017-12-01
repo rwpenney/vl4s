@@ -25,6 +25,8 @@ trait JsonExporter {
       case b: Boolean =>        JBool(b)
       case i: Int =>            JInt(i)
       case d: Double =>         JDouble(d)
+      case m: Map[String,Any] =>
+                    JObject(m.toList.map { kv => (kv._1, exportTerm(kv._2)) })
       case s: String =>         JString(s)
       case s: Seq[Any] =>       JArray(s.map{ exportTerm(_) }.toList)
       case _ =>                 JString(term.toString)

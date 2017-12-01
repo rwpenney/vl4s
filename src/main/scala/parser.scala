@@ -57,6 +57,12 @@ case class VLarrayOf(override val name: String, vltype: VLtypeDefn)
   def expandContents() = (None, Seq(vltype))
 }
 
+/** A VegaLite homogeneous object datatype keyed by strings */
+case class VLmapOf(override val name: String, vltype: VLtypeDefn)
+    extends VLtypeDefn(name) with VLtypeContainer {
+  def expandContents() = (None, Seq(vltype))
+}
+
 /** A VegaLite enumerated datatype, typically consisting of multiple strings */
 case class VLenumDefn(override val name: String,
                       values: Seq[String]) extends VLtypeDefn(name)
@@ -69,13 +75,6 @@ case class VLanyOf(override val name: String,
                    options: Seq[VLtypeDefn])
     extends VLtypeDefn(name) with VLtypeContainer {
   def expandContents() = (Some(this), options)
-}
-
-/** A VegaLite datatype representing a tuple of child types */
-case class VLtupleDefn(override val name: String,
-                       elements: Seq[VLtypeDefn])
-    extends VLtypeDefn(name) with VLtypeContainer {
-  def expandContents() = (Some(this), elements)
 }
 
 /** A field within a VegaLite operator definition */
@@ -98,10 +97,11 @@ case class VLobjRef(val alias: String,
 class VLschema(val types: Seq[VLtypeDefn]) {
 
   /** Extract all top-level object references (likely to need typedefs) */
-  def objRefs: Seq[VLobjRef] = {
+  def objRefs: Seq[VLtypeDefn] = {
     types.flatMap { x =>
       x match {
-        case x: VLobjRef => Some(x)
+        case m: VLmapOf => Some(m)
+        case o: VLobjRef => Some(o)
         case _ => None
       }
     }
@@ -155,7 +155,9 @@ object SchemaParser {
           case JString("object") => {
             spec.get("additionalProperties") match {
               case Some(addprops) =>
-                parseRef(vlTypeName, objToMap(addprops))
+                VLmapOf(vlTypeName,
+                        parseTypeDefn(vlTypeName + "_vals",
+                                      objToMap(addprops)))
               case None => VLbareType("object")
             }
           }

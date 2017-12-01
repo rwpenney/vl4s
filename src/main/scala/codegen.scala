@@ -72,6 +72,16 @@ class ArrayCoder(defn: VLarrayOf) extends TypeCoder with ParentCoder {
 }
 
 
+class MapCoder(defn: VLmapOf) extends TypeCoder with ParentCoder {
+  val itemtype = CodeGen.toCodeable(defn.vltype).targetname
+
+  def typename = CodeGen.cleanClassName(defn.name)
+  override def targetname = s"Map[String, ${itemtype}]"
+  def toCode(recursive: Boolean = true) =
+    makeHelperClasses(Seq(defn.vltype)).getOrElse("")
+}
+
+
 class EnumCoder(defn: VLenumDefn) extends TypeCoder {
   def typename = defn.name
 
@@ -113,17 +123,6 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
         Some(options),
         Some("}")) . flatten . mkString("", "\n", "\n\n")
   }
-}
-
-
-class TupleCoder(defn: VLtupleDefn) extends TypeCoder with ParentCoder {
-  val elementnames = defn.elements.map {
-    elt => CodeGen.toCodeable(elt).targetname }
-
-  def typename = CodeGen.cleanClassName(defn.name)
-  override def targetname = elementnames.mkString("(", ", ", ")")
-
-  def toCode(recursive: Boolean = true): String = ""
 }
 
 
@@ -251,9 +250,9 @@ object CodeGen {
     vltype match {
       case bare: VLbareType =>  new BareCoder(bare)
       case arr: VLarrayOf =>    new ArrayCoder(arr)
+      case mp: VLmapOf =>       new MapCoder(mp)
       case enum: VLenumDefn =>  new EnumCoder(enum)
       case ao: VLanyOf =>       new AnyOfCoder(ao)
-      case tpl: VLtupleDefn =>  new TupleCoder(tpl)
       case op: VLopDefn =>      new OperatorCoder(op)
       case or: VLobjRef =>      new ObjRefCoder(or)
       case _ =>                 new EmptyCoder
