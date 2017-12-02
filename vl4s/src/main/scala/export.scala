@@ -44,7 +44,7 @@ object ExportImplicits {
   implicit class HtmlExporter(spec: TopLevelSpec) {
     import org.json4s.native.JsonMethods.{ pretty, render }
 
-    val cdnUrlPrefix = "https://cdnjs.cloudfare.com/ajax/libs"
+    val cdnUrlPrefix = "https://cdnjs.cloudflare.com/ajax/libs"
 
     val jsLibraries = Seq(
       s"${cdnUrlPrefix}/vega/3.0.7/vega.js",

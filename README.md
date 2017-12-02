@@ -22,60 +22,107 @@ The build-system is managed by [SBT](http://www.scala-sbt.org/),
 and consists of two projects:
 * the "root" project, which must be compiled and run to generate
   the file "vl4s/src/main/scala/auto-vega.scala"
-  from a local copy of the VegaLite schema (e.g. "v2.0.0.json")
+  from either the upstream VegaLite schema based on a version-number
+  supplied with the "-V" command-line argument,
+  or a local copy of a schema file (e.g. "v2.0.0.json")
 * the "vl4s" project, which will build the VegaLite API itself,
-  and eventually allow creation of VegaLite JSON documents.
+  and allows creation of VegaLite JSON documents from
+  a user-supplied plot specification.
 
-(The tool is currently at a very early stage of development.)
+(The tool is currently at an early stage of development.)
 
 
 ## Example
 
+![AptSizePlot](plot-apt-sizes.png)
+
+Given a tab-separated datafile representing the sizes of packages
+in a [Debian](https://www.debian.org) system,
+one can generate an interactive Vega-Lite plot
+using a recipe such as:
 ```scala
 import org.json4s._
 import org.json4s.native.JsonMethods.{ pretty, render }
 import uk.rwpenney.vl4s._
 import uk.rwpenney.vl4s.ShortcutImplicits._
 
-val plot = SimpleSpec() .
-  background("green") .
-  data("file:/somewhere/interesting.csv") .
+
+val spec = SimpleSpec() .
+  data("apt-package-sizes.tsv") .
+  selection(
+    Map("chosen" -> SingleSelection() .
+                      encodings(Seq(SingleDefChannel.color)) .
+                      vtype(SingleSelection_type.single))) .
+  mark(Mark.bar) .
   encoding(EncodingWithFacet() .
-    x(PositionFieldDef() .
-      field("x_column") .
-      axis(Axis() .
-        title("Some title"))) .
-    y(PositionFieldDef() .
-      field("y_column")
-      bin(BinParams() .
-        maxbins(50) .
-        nice(true))))
+    >> { enc => enc .
+      x(enc.XYaxisDef .
+        axis(Axis() .
+          title("log(size)")) .
+        field("logSize") .
+        vtype(Type.quantitative) .
+        bin(BinParams() .
+          maxbins(20))) .
+      y(enc.XYaxisDef .
+        axis(Axis() .
+          title("count")) .
+        field("*") .
+        vtype(Type.quantitative) .
+        aggregate(AggregateOp.count)) .
+      color(MarkPropValueDefWithCondition() .
+        condition(Conditional_MarkPropFieldDef_() .
+          field("simpleSection") .
+          selection("chosen") .
+          vtype(Type.nominal)) .
+        value("grey"))
+    }
+  )
 
 val json = plot.toJValue
 println(pretty(render(json)))
 ```
-will create:
+This will generate a JSON document of the following form:
 ```json
 {
-  "background":"green",
   "data":{
-    "url":"file:/somewhere/interesting.csv"
+    "url":"apt-package-sizes.tsv"
   },
+  "selection":{
+    "chosen":{
+      "encodings":["color"],
+      "type":"single"
+    }
+  },
+  "mark":"bar",
   "encoding":{
     "x":{
-      "field":"x_column",
       "axis":{
-        "title":"Some title"
+        "title":"log(size)"
+      },
+      "field":"logSize",
+      "type":"quantitative",
+      "bin":{
+        "maxbins":20.0
       }
     },
     "y":{
-      "field":"y_column",
-      "bin":{
-        "maxbins":50.0,
-        "nice":true
-      }
+      "axis":{
+        "title":"count"
+      },
+      "field":"*",
+      "type":"quantitative",
+      "aggregate":"count"
+    },
+    "color":{
+      "condition":{
+        "field":"simpleSection",
+        "selection":"chosen",
+        "type":"nominal"
+      },
+      "value":"grey"
     }
   }
 }
-
 ```
+Alternatively, one can use the methods in the ExportImplicits object
+to wrap this in an HTML &gt;div&lt; for inclusion in a web-page.

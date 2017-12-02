@@ -81,7 +81,7 @@ object Demo {
                 |<head><title>Simple VL4S demo</title>
                 |  <style type="text/css">
                 |    body { background-color: white; }
-                |    div.vl4s_embed { height: 400px; width: 600px; }
+                |    div.vl4s_embed { height: 500px; width: 700px; }
                 |  </style>
                 |${spec.jsImports(indent="  ")}
                 |</head>
