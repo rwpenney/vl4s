@@ -44,10 +44,12 @@ object ExportImplicits {
   implicit class HtmlExporter(spec: TopLevelSpec) {
     import org.json4s.native.JsonMethods.{ pretty, render }
 
+    val cdnUrlPrefix = "https://cdnjs.cloudfare.com/ajax/libs"
+
     val jsLibraries = Seq(
-      "https://cdnjs.cloudflare.com/ajax/libs/vega/3.0.7/vega.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/vega-lite/2.0.1/vega-lite.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/vega-embed/3.0.0-rc7/vega-embed.js")
+      s"${cdnUrlPrefix}/vega/3.0.7/vega.js",
+      s"${cdnUrlPrefix}/vega-lite/${MetaData.schemaVersion}/vega-lite.js",
+      s"${cdnUrlPrefix}/vega-embed/3.0.0-rc7/vega-embed.js")
 
     def jsImports(indent: String = ""): String = {
       jsLibraries.map {

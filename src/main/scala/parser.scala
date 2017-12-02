@@ -94,7 +94,7 @@ case class VLobjRef(val alias: String,
 
 
 /** Representation of all VegaLite types extracted from a JSON schema */
-class VLschema(val types: Seq[VLtypeDefn]) {
+class VLschema(val types: Seq[VLtypeDefn], val version: String) {
 
   /** Extract all top-level object references (likely to need typedefs) */
   def objRefs: Seq[VLtypeDefn] = {
@@ -111,9 +111,9 @@ class VLschema(val types: Seq[VLtypeDefn]) {
 
 /** Ingest Vega-Lite JSON schema, converting to object tree */
 object SchemaParser {
-  def apply(src: scala.io.BufferedSource): VLschema = {
-    val json = J4Sparse(src.reader)
-    new VLschema(digestTree(json))
+  def apply(vsrc: VersionedSource): VLschema = {
+    val json = J4Sparse(vsrc.src.reader)
+    new VLschema(digestTree(json), vsrc.version)
   }
 
   /** Extract Vega-Lite class definitions from json4s document tree */

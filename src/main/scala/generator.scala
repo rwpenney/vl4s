@@ -13,10 +13,42 @@
 package uk.rwpenney.vl4s.gen
 
 
+/** Handle for reading known version of VegaLite schema, e.g. from URL */
+class VersionedSource(val src: scala.io.BufferedSource,
+                      val version: String)
+
+object VersionedSource {
+  val upstreamBaseURL = "https://raw.githubusercontent.com/vega/" +
+                          "schema/master/vega-lite"
+
+  def fromURL(url: String) = {
+    url match {
+      case schemaRegexp(version) =>
+        new VersionedSource(scala.io.Source.fromURL(url), version)
+      case _ => throw new IllegalArgumentException(
+                      s"""Cannot extract schema version from URL "${url}"""")
+    }
+  }
+
+  def fromLocal(rootdir: String, version: String) = {
+    val path = java.nio.file.Paths.get(rootdir).resolve(schemaFile(version))
+    new VersionedSource(scala.io.Source.fromFile(path.toFile), version)
+  }
+
+  def fromUpstream(version: String) = {
+    val url = s"${upstreamBaseURL}/${schemaFile(version)}"
+    new VersionedSource(scala.io.Source.fromURL(url), version)
+  }
+
+  def schemaFile(version: String) = s"v${version}.json"
+  val schemaRegexp = raw".*v([0-9][.0-9]*[0-9])\.json$$".r
+}
+
+
 object Generator {
   case class Config(
-    schemaUrl: String = "https://raw.githubusercontent.com/vega/schema/" +
-                        "master/vega-lite/v2.0.0.json",
+    schemaUrl: String = "",
+    schemaVersion: String = "2.0.1",
     srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
   )
   val defaultConfig = Config()
@@ -26,6 +58,10 @@ object Generator {
       opt[String]('s', "schema-url") .
         action( (x, c) => c.copy(schemaUrl = x) ) .
         text(s"URL of Vega-Lite schema (default=${defaultConfig.schemaUrl})")
+      opt[String]('V', "schema-version") .
+        action( (x, c) => c.copy(schemaVersion = x) ) .
+        text("Release version of Vega-Lite schema to read from github.com" +
+              s"(default=${defaultConfig.schemaVersion})")
 
       help("help").text("Print usage information")
       override def showUsageOnError = true
@@ -33,7 +69,11 @@ object Generator {
 
     optparse.parse(args, Config()) match {
       case Some(config) => {
-        val src = scala.io.Source.fromURL(config.schemaUrl)
+        val src = if (config.schemaUrl.nonEmpty) {
+                    VersionedSource.fromURL(config.schemaUrl)
+                  } else {
+                    VersionedSource.fromUpstream(config.schemaVersion)
+                  }
         val schema = SchemaParser(src)
         val codegen = new CodeGen(new java.io.FileOutputStream(config.srcOutput))
         codegen(schema)
