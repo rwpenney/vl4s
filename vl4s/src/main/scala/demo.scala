@@ -16,8 +16,6 @@ import uk.rwpenney.vl4s.ShortcutImplicits._
 object Demo {
   def main(args: Array[String]) {
     Seq(simple(), simple2()).map { spec =>
-      println(s"Spec: ${spec} =>\n")
-
       val json = spec.toJValue
 
       println(pretty(render(json)))
@@ -29,18 +27,23 @@ object Demo {
 
   def simple(): TopLevelSpec =
     SimpleSpec() .
-      background("green") .
-      data("file:/somewhere/interesting.csv") .
+      background("GhostWhite") .
+      data(InlineData() .
+        values(Seq(
+          Map("x_column" -> 2, "y_column" -> 1.4, "other" -> -31),
+          Map("x_column" -> 5, "y_column" -> 3.2, "other" -> -3),
+          Map("x_column" -> 7, "y_column" -> 1.9, "other" -> -5.2) ))) .
+      mark(Mark.line) .
       encoding(EncodingWithFacet() .
         x(PositionFieldDef() .
           field("x_column") .
           axis(Axis() .
-            title("Some title"))) .
+            title("x-axis"))) .
         y(PositionFieldDef() .
-          field("y_column")
-          bin(BinParams() .
-            maxbins(50) .
-            nice(true))))
+          field("y_column") .
+          axis(Axis() .
+            title("y-axis")))
+      )
 
   def simple2(): TopLevelSpec =
     SimpleSpec() .

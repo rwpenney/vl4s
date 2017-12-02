@@ -56,8 +56,8 @@ class EmptyCoder extends TypeCoder {
 
 
 class BareCoder(defn: VLbareType) extends TypeCoder {
-  def typename = CodeGen.cleanClassName(
-                    CodeGen.mapBareTypes.getOrElse(defn.name, defn.name))
+  override def targetname = CodeGen.mapBareTypes.getOrElse(defn.name, defn.name)
+  def typename = CodeGen.cleanClassName(targetname)
   def toCode(recursive: Boolean = true) = ""
 }
 
@@ -288,17 +288,19 @@ object CodeGen {
     "boolean" ->  "Boolean",
     "null" ->     "Unit",
     "number" ->   "Double",
-    "object" ->   "Any",
+    "object" ->   "Map[String, Any]",
     "string" ->   "String"
   )
 
   /** Convert VegaLite typename into valid Scala identifier */
-  def cleanClassName(orig: String): String =
-    orig.map {
-      case '<' => '_'
-      case '>' => '_'
+  def cleanClassName(orig: String): String = {
+    val exclusions = Set(' ', ',', ';', ':')
+    orig.filter { !exclusions.contains(_) } .
+    map {
+      case '<' | '>' | '[' | ']' => '_'
       case c =>   c
     }
+  }
 
   /** Marker traits to apply to VegaLite operators based on classname regexps */
   val markerInterfaces = Map(
