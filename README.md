@@ -46,7 +46,6 @@ import org.json4s.native.JsonMethods.{ pretty, render }
 import uk.rwpenney.vl4s._
 import uk.rwpenney.vl4s.ShortcutImplicits._
 
-
 val spec = SimpleSpec() .
   data("apt-package-sizes.tsv") .
   selection(
@@ -125,4 +124,4 @@ This will generate a JSON document of the following form:
 }
 ```
 Alternatively, one can use the methods in the ExportImplicits object
-to wrap this in an HTML &gt;div&lt; for inclusion in a web-page.
+to wrap this in an HTML &lt;div&gt; for inclusion in a web-page.
