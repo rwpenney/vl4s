@@ -42,7 +42,7 @@ trait JsonExporter {
 
 object ExportImplicits {
   implicit class HtmlExporter(spec: TopLevelSpec) {
-    import org.json4s.native.JsonMethods.{ pretty, render }
+    import org.json4s.native.JsonMethods.{ compact, pretty, render }
 
     val cdnUrlPrefix = "https://cdnjs.cloudflare.com/ajax/libs"
 
@@ -57,8 +57,10 @@ object ExportImplicits {
       mkString("\n")
     }
 
-    def htmlDiv(ident: String, jsvarname: String = "vegaSpec"): String = {
-      val jsonSpec = pretty(render(spec.toJValue))
+    def htmlDiv(ident: String, jsvarname: String = "vegaSpec",
+                prettyJson: Boolean = false): String = {
+      val layout = if (prettyJson) pretty _ else compact _
+      val jsonSpec = layout(render(spec.toJValue))
 
       s"""|<div id="${ident}"></div>
           |<script type="text/javascript">

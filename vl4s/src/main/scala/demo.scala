@@ -140,10 +140,12 @@ object Demo {
     val optparse = new scopt.OptionParser[Config]("vl4s demonstrations") {
       opt[Mode.Value]('m', "mode") .
         action( (x, c) => c.copy(mode = x) ).
-        text(s"Choice of demonstration (default=${defaultConfig.mode})")
+        text(s"Choice of demonstration (${Mode.values.mkString("/")}," +
+             s" default=${defaultConfig.mode})")
       opt[Format.Value]('f', "output-format") .
         action( (x, c) => c.copy(outputFormat = x) ).
-        text(s"Output format (default=${defaultConfig.outputFormat})")
+        text(s"Output format (${Format.values.mkString("/")}," +
+             s" default=${defaultConfig.outputFormat})")
       opt[String]('o', "output-file") .
         action( (x, c) => c.copy(outputFile = x) ) .
         text("Output file to generate (blank implies stdout," +
@@ -188,7 +190,7 @@ object Demo {
         |</head>
         |<body>
         |<h1>A trivial VL4S demonstration</h1>
-        |${spec.htmlDiv(ident="vl4s_embed")}
+        |${spec.htmlDiv(ident="vl4s_embed", prettyJson=true)}
         |</body>
         |</html>""" . stripMargin
 }
