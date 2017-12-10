@@ -20,8 +20,8 @@ import org.scalatest.FlatSpec
 import uk.rwpenney.vl4s.gen._
 
 
-object Helpers {
-  def parseJson(doc: String): Seq[VLtypeDefn] = {
+object ParseHelpers {
+  def fromJson(doc: String): Seq[VLtypeDefn] = {
     val root = J4Sparse(doc)
     SchemaParser.digestTree(root)
   }
@@ -31,7 +31,7 @@ object Helpers {
 /** Unit-tests for SchemaParser */
 class Parser extends FlatSpec {
   "The SchemaParser" should "handle simple bare types" in {
-    val typedefs = Helpers.parseJson("""{
+    val typedefs = ParseHelpers.fromJson("""{
         "definitions": {
           "Type0": { "type": "number" } }
       }""")
@@ -42,7 +42,7 @@ class Parser extends FlatSpec {
   }
 
   it should "extract all basic types" in {
-    val typedefs = Helpers.parseJson("""{
+    val typedefs = ParseHelpers.fromJson("""{
         "definitions": {
           "Bare": { "type" : "string" },
           "Array": { "type": "array", "items": { "type": "number" } },

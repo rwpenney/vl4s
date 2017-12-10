@@ -25,12 +25,13 @@ trait JsonExporter {
       case b: Boolean =>        JBool(b)
       case i: Int =>            JInt(i)
       case d: Double =>         JDouble(d)
-      case m: Map[String,Any] =>
+      case m: Map[String @unchecked, Any @unchecked] =>
                     JObject(m.toList.map { kv => (kv._1, exportTerm(kv._2)) })
       case s: String =>         JString(s)
       case s: Seq[Any] =>       JArray(s.map{ exportTerm(_) }.toList)
       case _ =>                 JString(term.toString)
     }
+    // FIXME - find tighter type test for Map[String,Any]
   }
 
   def exportMap(props: Map[String, Any]): JValue = {
