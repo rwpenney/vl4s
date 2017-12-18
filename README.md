@@ -5,6 +5,8 @@ a [Scala](https://www.scala-lang.org) library
 via which interactive plots can be generated conforming
 to the [Vega-Lite](https://vega.github.io/vega-lite) specification.
 
+![BesselPlot](plot-bessel.png)
+
 vl4s is intended to allow the
 JSON [schema](https://github.com/vega/schema/tree/master/vega-lite)
 provided by Vega-Lite to be converted into a Scala API
