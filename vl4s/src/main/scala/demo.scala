@@ -15,6 +15,7 @@ package uk.rwpenney.vl4s.demo
 
 import org.json4s._
 import org.json4s.native.JsonMethods.{ pretty, render }
+import scala.annotation.tailrec
 import uk.rwpenney.vl4s._
 import uk.rwpenney.vl4s.ExportImplicits._
 import uk.rwpenney.vl4s.ShortcutImplicits._
@@ -56,7 +57,12 @@ object TrivialDemo extends SpecGenerator {
   def makeSpec: TopLevelSpec =
     SimpleSpec() .
       background("GhostWhite") .
-      data("myDataFile.csv") .
+      //data("myDataFile.csv") .
+      data(InlineData() .
+        values(Seq(
+          Map("x_column" -> 2, "y_column" -> 1.4, "other" -> -31),
+          Map("x_column" -> 5, "y_column" -> 3.2, "other" -> -3),
+          Map("x_column" -> 7, "y_column" -> 1.9, "other" -> -5.2) ))) .
       mark(Mark.line) .
       encoding(EncodingWithFacet() .
         x(PositionFieldDef() .
@@ -68,6 +74,50 @@ object TrivialDemo extends SpecGenerator {
           axis(Axis() .
             title("y-axis")))
       )
+}
+
+
+object WaveDemo extends SpecGenerator {
+  def makeSpec: TopLevelSpec = {
+    val xvals = (0.0 to 5.0 by 0.2).toSeq
+    val curves = Map(
+      "cosine" -> xvals.map { math.cos(_) },
+      "sine" -> xvals.map { math.sin(_) },
+      "J0" -> xvals.map { bessel0(_) } )
+    val curveData = curves.map { case (id, vals) =>
+      xvals.zip(vals).map { case (x, y) =>
+        Map( "func" -> id, "x" -> x, "y" -> y) } } . flatten . toSeq
+
+    SimpleSpec() .
+      data(InlineData() .
+        values(curveData)) .
+      mark(MarkDef() .
+        interpolate(Interpolate.basis)
+        vtype(Mark.line)) .
+      encoding(EncodingWithFacet() .
+        x(PositionFieldDef() .
+          field("x")) .
+        y(PositionFieldDef() .
+          field("y")) .
+        color(MarkPropFieldDefWithCondition() .
+          field("func") .
+          vtype(Type.nominal)))
+  }
+
+  def bessel0(x: Double) = {
+    @tailrec
+    def addTerms(accum: Double, xpow: Double, n: Integer, factorial: Long): Double = {
+      val term = xpow  / (factorial * factorial)
+      if (term < 1e-16) {
+        accum
+      } else {
+        val sgn = if ((n % 2) == 1) -1 else +1
+        addTerms(accum + sgn * term,
+                 0.25 * xpow * x * x, n + 1, (n + 1) * factorial)
+      }
+    }
+    addTerms(0.0, 1.0, 0, 1)
+  }
 }
 
 
@@ -113,12 +163,13 @@ object GaussMixDemo extends SpecGenerator {
 object Demo {
   object Mode extends Enumeration {
     type Mode = Value
-    val Trivial, GaussMix = Value
+    val Trivial, Waves, GaussMix = Value
   }
   implicit val modeRead: scopt.Read[Mode.Value] =
     scopt.Read.reads(Mode withName _)
   val generators: Map[Mode.Value, SpecGenerator] = Map(
     Mode.Trivial →  TrivialDemo,
+    Mode.Waves →    WaveDemo,
     Mode.GaussMix → GaussMixDemo
   )
 

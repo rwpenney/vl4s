@@ -1,6 +1,6 @@
 # VL4S (Vega-Lite for Scala)
 
-vl4s is a prototype tool for automatically generating
+vl4s is a tool for automatically generating
 a [Scala](https://www.scala-lang.org) library
 via which interactive plots can be generated conforming
 to the [Vega-Lite](https://vega.github.io/vega-lite) specification.
