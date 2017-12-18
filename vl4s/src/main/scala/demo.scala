@@ -180,17 +180,6 @@ object Demo {
   }
 
   def makeWebpage(spec: TopLevelSpec): String =
-    s"""|<html>
-        |<head><title>Simple VL4S demo</title>
-        |  <style type="text/css">
-        |    body { background-color: white; }
-        |    div.vl4s_embed { height: 500px; width: 700px; }
-        |  </style>
-        |${spec.jsImports(indent="  ")}
-        |</head>
-        |<body>
-        |<h1>A trivial VL4S demonstration</h1>
-        |${spec.htmlDiv(ident="vl4s_embed", prettyJson=true)}
-        |</body>
-        |</html>""" . stripMargin
+    s"""${spec.htmlPage(headerPrefix="<title>Simple VL4S demo</title>",
+                        bodyPrefix="<h1>A trivial VL4S demonstration</h1>")}"""
 }

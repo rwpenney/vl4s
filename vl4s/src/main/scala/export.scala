@@ -58,6 +58,25 @@ object ExportImplicits {
       mkString("\n")
     }
 
+    def htmlPage(headerPrefix: String = "",
+                 bodyPrefix: String = ""): String = {
+      val ident = makeIdent
+      s"""|<html>
+          |<head>${headerPrefix}
+          |  <meta http-equiv="content-type"
+          |    content="text/html; charset=utf-8"/>
+          |  <style type="text/css">
+          |    body { background-color: white; }
+          |    div.${ident} { height: 90em; width: 120em; }
+          |  </style>
+          |${jsImports(indent="  ")}
+          |</head>
+          |<body>${bodyPrefix}
+          |${htmlDiv(ident=ident, prettyJson=true)}
+          |</body>
+          |</html>""" . stripMargin
+    }
+
     def htmlDiv(ident: String, jsvarname: String = "vegaSpec",
                 prettyJson: Boolean = false): String = {
       val layout = if (prettyJson) pretty _ else compact _
@@ -71,5 +90,16 @@ object ExportImplicits {
           |vegaEmbed("#${ident}", ${jsvarname}, ${jsvarname}_opts);
           |</script>""" . stripMargin
     }
+
+    def htmlIframe(): String = {
+      val ident = makeIdent
+      s"""|<iframe id="${makeIdent}_iframe"
+          |  sandbox="allow-scripts allow-same-origin"
+          |  style="border: none; width: 100%"
+          |  srcdoc="${scala.xml.Utility.escape(htmlPage(ident))}">
+          |</iframe>""" . stripMargin
+    }
+
+    def makeIdent: String = "vl4s-" + java.util.UUID.randomUUID.toString
   }
 }

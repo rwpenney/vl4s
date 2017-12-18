@@ -114,7 +114,6 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
             |    new ${typename}(choice = _arg)""" . stripMargin
       }
     } . mkString("\n")
-    // FIXME - replace dummy member
 
     Seq(if (recursive) makeHelperClasses(defn.options) else None,
         Some(s"""|class ${typename}(val choice: Any) extends JsonExporter {

@@ -59,4 +59,33 @@ class TypeGen extends FlatSpec {
     assert(b1.typename == "ContainerOf_Lemons_")
     assert(b1.targetname == "ContainerOf[Lemons]")
   }
+
+
+  "An array type" should "have sensible names" in {
+    val arr = VLarrayOf("NumericArray", VLbareType("number"))
+    val coded = CodeGen.toCodeable(arr)
+
+    assert(coded.typename == "NumericArray")
+    assert(coded.targetname == "Seq[Double]")
+  }
+
+  "A map type" should "have sensible names" in {
+    val mp = VLmapOf("BoolMap", VLbareType("boolean"))
+    val coded = CodeGen.toCodeable(mp)
+
+    assert(coded.typename == "BoolMap")
+    assert(coded.targetname == "Map[String, Boolean]")
+  }
+
+  "An enum type" should "mention all values" in {
+    val randgen = new scala.util.Random()
+    val evals = (1 to 50).map { _ => f"Enum-${randgen.nextInt(1 << 30)}%08x" }
+    val enum = VLenumDefn("DummyEnum", evals)
+
+    val coded = CodeGen.toCodeable(enum).toCode()
+    evals.foreach { str =>
+      assert(coded.contains(str))
+      assert(coded.contains("final val " + str.replaceAll("-", "_")))
+    }
+  }
 }
