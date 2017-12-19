@@ -21,67 +21,6 @@ import uk.rwpenney.vl4s.ExportImplicits._
 import uk.rwpenney.vl4s.ShortcutImplicits._
 
 
-/** Methods for computing Bessel functions of the first kind */
-trait BesselCalc {
-  def J(n: Integer)(x: Double) = {
-    addTerms(n, x, 0.0,
-             math.pow(0.5 * x, n.toDouble), 0,
-             1, factorial(n))
-  }
-
-  @tailrec
-  protected final def addTerms(n: Integer, x: Double, accum: Double,
-                               xpow: Double, s: Integer,
-                               fact: math.BigInt,
-                               factN: math.BigInt): Double = {
-    val sgn = if ((s % 2) == 1) -1 else +1
-    val term = sgn * xpow  / (fact * factN).toDouble
-    if (math.abs(term) < 1e-16 || s > 50) {
-      accum + term
-    } else {
-      addTerms(n, x, accum + term,
-               0.25 * xpow * x * x, s + 1,
-               (s + 1) * fact, (s + n + 1) * factN)
-    }
-  }
-
-  protected def factorial(n: Int): math.BigInt = {
-    if (n > 1) {
-      (math.BigInt(1) to n).product
-    } else {
-      1
-    }
-  }
-}
-
-
-/** Dataset generator using a simple Gaussian mixture model */
-object GaussMix {
-  val randgen = new scala.util.Random
-
-  case class Gaussian(label: String, mean: Double, stddev: Double)
-  val clusters = Map(1.0 -> Gaussian("cat-A", 1.0, 0.2),
-                     0.2 -> Gaussian("cat-B", 2.0, 0.3),
-                     0.1 -> Gaussian("cat-C", 0.0, 0.1))
-
-  def apply(npoints: Integer = 100): Seq[Map[String, Any]] = {
-    val clusterSeq = clusters.scanLeft((0.0, Gaussian("", 0, 0))) {
-      case ((tot, _), (wght, g)) => (tot + wght, g) } . drop(1)
-    val totalWeight = clusters.keys.sum
-
-    (0 until npoints).map { _ =>
-      val wCluster = totalWeight * randgen.nextDouble
-
-      val clust = clusterSeq.dropWhile {
-        case (w, g) => (w < wCluster) } . head._2
-
-      Map("label" ->  clust.label,
-          "x" ->      (clust.mean + clust.stddev * randgen.nextGaussian))
-    }
-  }
-}
-
-
 trait SpecGenerator {
   def title: String
   def makeSpec: TopLevelSpec
@@ -118,11 +57,12 @@ object WaveDemo extends SpecGenerator with BesselCalc {
   def title = "VL4S oscillatory functions"
 
   def makeSpec: TopLevelSpec = {
-    val xvals = (0.0 to 5.0 by 0.2).toSeq
+    val xvals = (0.0 to 8.0 by 0.2).toSeq
     val curves = Map(
       "cosine" -> xvals.map { math.cos(_) },
       "sine" -> xvals.map { math.sin(_) },
-      "J0" -> xvals.map { J(0)(_) } )
+      "J0" -> xvals.map { J(0)(_) },
+      "J4" -> xvals.map { J(4)(_) } )
     val curveData = curves.map { case (id, vals) =>
       xvals.zip(vals).map { case (x, y) =>
         Map( "func" -> id, "x" -> x, "y" -> y) } } . flatten . toSeq

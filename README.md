@@ -5,7 +5,7 @@ a [Scala](https://www.scala-lang.org) library
 via which interactive plots can be generated conforming
 to the [Vega-Lite](https://vega.github.io/vega-lite) specification.
 
-![BesselPlot](plot-bessel.png)
+![BesselPlot](gallery/plot-bessel.png)
 
 vl4s is intended to allow the
 JSON [schema](https://github.com/vega/schema/tree/master/vega-lite)
@@ -26,17 +26,20 @@ and consists of two projects:
   the file "vl4s/src/main/scala/auto-vega.scala"
   from either the upstream VegaLite schema based on a version-number
   supplied with the "-V" command-line argument,
-  or a local copy of a schema file (e.g. "v2.0.0.json")
+  or a local copy of a schema file (e.g. "v2.0.3.json")
 * the "vl4s" project, which will build the VegaLite API itself,
   and allows creation of VegaLite JSON documents from
   a user-supplied plot specification.
 
-(The tool is currently at an early stage of development.)
+The tool is currently at an early stage of development,
+but already supports the entire Vega-Lite 2.0 grammar,
+including generation of interactive line plots,
+and histograms with aggregation operations, repeats, selections, etc.
 
 
 ## Example
 
-![AptSizePlot](plot-apt-sizes.png)
+![AptSizePlot](gallery/plot-apt-sizes.png)
 
 Given a tab-separated datafile representing the sizes of packages
 in a [Debian](https://www.debian.org) system,
@@ -79,7 +82,7 @@ val spec = SimpleSpec() .
     }
   )
 
-val json = plot.toJValue
+val json = spec.toJValue
 println(pretty(render(json)))
 ```
 This will generate a JSON document of the following form:
