@@ -63,9 +63,9 @@ object WaveDemo extends SpecGenerator with BesselCalc {
       "sine" -> xvals.map { math.sin(_) },
       "J0" -> xvals.map { J(0)(_) },
       "J4" -> xvals.map { J(4)(_) } )
-    val curveData = curves.map { case (id, vals) =>
+    val curveData = curves.flatMap { case (id, vals) =>
       xvals.zip(vals).map { case (x, y) =>
-        Map( "func" -> id, "x" -> x, "y" -> y) } } . flatten . toSeq
+        Map( "func" -> id, "x" -> x, "y" -> y) } } . toSeq
 
     SimpleSpec() .
       data(InlineData() .
@@ -92,9 +92,9 @@ object BesselDemo extends SpecGenerator with BesselCalc {
     val xvals = (0.0 to 10.0 by 0.2).toSeq
     val orders = (0 until 4).toSeq
     val labels = orders.map { n => s"J${n}" }
-    val curveData = orders.zip(labels).map { case (n, id) =>
+    val curveData = orders.zip(labels).flatMap { case (n, id) =>
       xvals.map { x => Map("x" -> x, id -> J(n)(x)) }
-    } . flatten . toSeq
+    } . toSeq
 
     RepeatedSpec() .
       data(InlineData() .

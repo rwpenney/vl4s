@@ -1,5 +1,6 @@
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature"),
+  organization := "uk.rwpenney",
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
     if (isSnapshot.value)
@@ -26,7 +27,7 @@ lazy val root = (project in file(".")) .
   settings(commonSettings: _*) .
   settings(
     name := "vl4s-generator",
-    version := "0.2.3-SNAPSHOT",
+    version := "0.3-SNAPSHOT",
     scalaVersion:= "2.12.4",
     scalacOptions ++= Seq("-deprecation", "-feature"),
     libraryDependencies ++= Seq(

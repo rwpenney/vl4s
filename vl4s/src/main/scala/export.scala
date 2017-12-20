@@ -93,7 +93,7 @@ object ExportImplicits {
 
     def htmlIframe(): String = {
       val ident = makeIdent
-      s"""|<iframe id="${makeIdent}_iframe"
+      s"""|<iframe id="${makeIdent}-iframe"
           |  sandbox="allow-scripts allow-same-origin"
           |  style="border: none; width: 100%"
           |  srcdoc="${scala.xml.Utility.escape(htmlPage(ident))}">
