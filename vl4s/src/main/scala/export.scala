@@ -67,7 +67,6 @@ object ExportImplicits {
           |    content="text/html; charset=utf-8"/>
           |  <style type="text/css">
           |    body { background-color: white; }
-          |    div.${ident} { height: 90em; width: 120em; }
           |  </style>
           |${jsImports(indent="  ")}
           |</head>
@@ -82,7 +81,7 @@ object ExportImplicits {
       val layout = if (prettyJson) pretty _ else compact _
       val jsonSpec = layout(render(spec.toJValue))
 
-      s"""|<div id="${ident}"></div>
+      s"""|<div id="${ident}" style="width: 100%;"></div>
           |<script type="text/javascript">
           |var ${jsvarname}_opts = { "mode": "vega-lite", "renderer": "svg",
           |  "actions": { "editor": false, "export": true, "source": false } }
@@ -92,12 +91,25 @@ object ExportImplicits {
     }
 
     def htmlIframe(): String = {
-      val ident = makeIdent
-      s"""|<iframe id="${makeIdent}-iframe"
+      val ident = makeIdent + "-iframe"
+      s"""|<iframe id="${ident}"
           |  sandbox="allow-scripts allow-same-origin"
-          |  style="border: none; width: 100%"
-          |  srcdoc="${scala.xml.Utility.escape(htmlPage(ident))}">
-          |</iframe>""" . stripMargin
+          |  style="border: none; width: 100%;"
+          |  srcdoc="${scala.xml.Utility.escape(htmlPage())}">
+          |</iframe>
+          |<script>
+          |  (function() {
+          |    function vl4sFitFrame(elt, attempt) {
+          |      var targetHeight = elt.contentWindow.document.body.scrollHeight || '320';
+          |      elt.style.height = (targetHeight + 16) + 'px';
+          |      if (attempt <= 5) {
+          |        setTimeout(function() { vl4sFitFrame(elt, attempt+1) },
+          |                   500 * (0.5 + attempt));
+          |      }
+          |    }
+          |    vl4sFitFrame(document.getElementById('${ident}'), 0);
+          |  })();
+          |</script>""" . stripMargin
     }
 
     def makeIdent: String = "vl4s-" + java.util.UUID.randomUUID.toString
