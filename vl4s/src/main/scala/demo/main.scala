@@ -230,7 +230,10 @@ object Demo {
     }
   }
 
-  def makeWebpage(spec: TopLevelSpec, title: String = ""): String =
+  def makeWebpage(spec: TopLevelSpec, title: String = ""): String = {
+    implicit val htmlSettings = HtmlSettings(vegaExport=true)
+
     s"""${spec.htmlPage(headerPrefix=s"<title>${title}</title>",
                         bodyPrefix=s"<h1>${title}</h1>")}"""
+  }
 }

@@ -129,4 +129,4 @@ This will generate a JSON document of the following form:
 }
 ```
 Alternatively, one can use the methods in the ExportImplicits object
-to wrap this in an HTML &lt;div&gt; for inclusion in a web-page.
+to wrap this in an HTML `<div>` for inclusion in a web-page.
