@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature"),
-  version := "0.3.2-SNAPSHOT",
+  version := "0.3.3-SNAPSHOT",
   organization := "uk.rwpenney",
   publishTo := {
     val nexus = "https://oss.sonatype.org/"

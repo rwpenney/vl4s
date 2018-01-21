@@ -59,7 +59,7 @@ object ExportImplicits {
 
     def jsLibraries(implicit config: HtmlSettings): Seq[String] = {
       val pfx = config.cdnUrlPrefix
-      Seq(s"${pfx}/vega/3.0.7/vega.js",
+      Seq(s"${pfx}/vega/3.0.9/vega.js",
           s"${pfx}/vega-lite/${MetaData.schemaVersion}/vega-lite.js",
           s"${pfx}/vega-embed/3.0.0-rc7/vega-embed.js")
     }

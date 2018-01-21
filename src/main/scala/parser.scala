@@ -12,7 +12,7 @@
 
 package uk.rwpenney.vl4s.gen
 
-import org.json4s.{ JArray, JField, JObject, JString, JValue }
+import org.json4s.{ JArray, JField, JNull, JObject, JString, JValue }
 import org.json4s.native.JsonMethods.{ parse => J4Sparse }
 import scala.annotation.tailrec
 
@@ -202,7 +202,20 @@ object SchemaParser {
 
   def parseEnumDefn(name: String,
                     spec: Map[String, JValue]): VLenumDefn = {
-    val terms = for { JString(term) <- spec("enum") } yield term
+    val terms = (spec("enum") match {
+        case JArray(entries) => entries
+        case _ =>               Seq.empty
+      }) .flatMap { x =>
+        x match {
+          case JString(term) => Some(term)
+          case JNull => {
+            println(s"WARNING: null enum for ${name}")
+            // FIXME - decide how to handle null values in enumerations
+            None
+          }
+          case _ => None
+        }
+      }
 
     spec.get("type") match {
       case Some(JString(vltype)) => {
