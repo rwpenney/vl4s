@@ -25,6 +25,13 @@ object ParseHelpers {
     val root = J4Sparse(doc)
     SchemaParser.digestTree(root)
   }
+
+  def typeCheck[T: ClassTag](vltype: VLtypeDefn)(fn: T => Unit) {
+    vltype match {
+      case x: T => fn(x)
+      case _ => throw new IllegalArgumentException
+    }
+  }
 }
 
 
@@ -42,6 +49,8 @@ class Parser extends FlatSpec {
   }
 
   it should "extract all basic types" in {
+    import ParseHelpers.typeCheck
+
     val typedefs = ParseHelpers.fromJson("""{
         "definitions": {
           "Bare": { "type" : "string" },
@@ -60,13 +69,6 @@ class Parser extends FlatSpec {
                           "type": "object" } } }
         }
       }""")
-
-    def typeCheck[T: ClassTag](vltype: VLtypeDefn)(fn: T => Unit) {
-      vltype match {
-        case x: T => fn(x)
-        case _ => throw new IllegalArgumentException
-      }
-    }
 
     assert(typedefs.length == 7)
 
@@ -135,6 +137,31 @@ class Parser extends FlatSpec {
 
       assert(obj.properties(1).name == "prop1")
       assert(obj.properties(1).vltype.name == "object")
+    }
+  }
+
+  it should "handle enumerations with nulls" in {
+    import ParseHelpers.typeCheck
+
+    val typedefs = ParseHelpers.fromJson("""{
+        "definitions": {
+          "Enum0": { "enum": [ "ea", "eb", "ec", null ],
+                     "type": [ "string", "null" ] }
+
+        }
+      }""")
+
+    typeCheck[VLanyOf](typedefs(0)) { ao =>
+      assert(ao.options.length == 2)
+
+      typeCheck[VLenumDefn](ao.options(0)) { enum =>
+        assert(enum.values.length == 3)
+        assert(enum.values == Seq("ea", "eb", "ec"))
+      }
+
+      typeCheck[VLnullType](ao.options(1)) { nl =>
+        assert(nl.name != "")
+      }
     }
   }
 }

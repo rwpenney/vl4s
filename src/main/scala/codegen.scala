@@ -55,6 +55,12 @@ class EmptyCoder extends TypeCoder {
 }
 
 
+class NullCoder(defn: VLnullType) extends TypeCoder {
+  override def typename = "Null"
+  def toCode(recursive: Boolean = true) = ""
+}
+
+
 class BareCoder(defn: VLbareType) extends TypeCoder {
   override def targetname = CodeGen.mapBareTypes.getOrElse(defn.name, defn.name)
   def typename = CodeGen.cleanClassName(targetname)
@@ -251,6 +257,7 @@ object CodeGen {
   /** Convert VegaLite type descriptor into source-code generator object */
   def toCodeable(vltype: VLtypeDefn): TypeCoder = {
     vltype match {
+      case nl: VLnullType =>    new NullCoder(nl)
       case bare: VLbareType =>  new BareCoder(bare)
       case arr: VLarrayOf =>    new ArrayCoder(arr)
       case mp: VLmapOf =>       new MapCoder(mp)

@@ -48,6 +48,9 @@ object VLtypeDefn {
   }
 }
 
+/** A VegaLite type equivalent to "null" */
+case class VLnullType(override val name: String) extends VLtypeDefn(name)
+
 /** A simple VegaLite datatype, typically corresponding to a native type */
 case class VLbareType(override val name: String) extends VLtypeDefn(name)
 
@@ -200,33 +203,44 @@ object SchemaParser {
     }
   }
 
+  /** Convert a Vega-Lite enumeration definition into a VLtypedefn
+   *
+   *  For most Vega-Lite enumerations, this will return a VLenumDefn,
+   *  consisting of a sequence of valid string identifiers.
+   *  However, a small number of enumerations may allow null
+   *  values, which are handled by returning a VLanyOf datastructure.
+   */
   def parseEnumDefn(name: String,
-                    spec: Map[String, JValue]): VLenumDefn = {
+                    spec: Map[String, JValue]): VLtypeDefn = {
     val terms = (spec("enum") match {
         case JArray(entries) => entries
         case _ =>               Seq.empty
       }) .flatMap { x =>
         x match {
           case JString(term) => Some(term)
-          case JNull => {
-            println(s"WARNING: null enum for ${name}")
-            // FIXME - decide how to handle null values in enumerations
-            None
-          }
-          case _ => None
+          case JNull =>         None
+          case _ =>             None
         }
       }
+
+    val pureEnum = VLenumDefn(name, terms)
 
     spec.get("type") match {
-      case Some(JString(vltype)) => {
-        if (vltype != "string") {
-          println(s"WARNING: non-string enum for ${name}")
+      case Some(JString("string")) => pureEnum
+      case None => pureEnum
+      case Some(JArray(arr)) => {
+        if (arr.toSet == Set("string", "null").map { JString(_) }) {
+          VLanyOf(name + "_any", Seq(pureEnum, VLnullType(name + "_null")))
+        } else {
+          println(s"WARNING: unhandle enum-types (${arr}) for ${name}")
+          pureEnum
         }
       }
-      case _ =>
+      case _ => {
+        println(s"WARNING: unknown enum-type for ${name}")
+        pureEnum
+      }
     }
-
-    VLenumDefn(name, terms)
   }
 
   def parseOpDefn(opname: String,
