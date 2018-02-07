@@ -3,7 +3,7 @@
  *  RW Penney, November 2017
  */
 
-//  Copyright (C) 2017, RW Penney
+//  Copyright (C) 2017-2018, RW Penney
 //  This file is part of VL4S.
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -105,8 +105,10 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
         |""" . stripMargin
   }
 
-  def cleanName(orig: String): String =
-    orig.replaceAll("-", "_")
+  def cleanName(orig: String): String = {
+    val cleaner = orig.replaceAll("-", "_")
+    CodeGen.mapReserved.getOrElse(cleaner, cleaner)
+  }
 }
 
 
@@ -286,7 +288,8 @@ object CodeGen {
 
   /** Conversion for VL properties which clash with Scala reserved words */
   val mapReserved = Map(
-    "type" -> "vtype"
+    "type" -> "vtype",
+    "wait" -> "vwait"
   )
 
   /** Conversion between VL raw types and Scala native types */

@@ -3,7 +3,7 @@
  *  RW Penney, December 2017
  */
 
-//  Copyright (C) 2017, RW Penney
+//  Copyright (C) 2017-2018, RW Penney
 //  This file is part of VL4S.
 
 /* This Source Code Form is subject to the terms of the Mozilla Public

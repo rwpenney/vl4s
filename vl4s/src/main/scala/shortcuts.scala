@@ -24,9 +24,9 @@ object ShortcutImplicits {
   }
 
   def toConditionalSeq(conditions: Map[String, String]):
-      Seq[Conditional_ValueDef_] = {
+      Seq[ConditionalSelection_ValueDef_] = {
     conditions.toSeq.map {
-      case (sel, value) => Conditional_ValueDef_() .
+      case (sel, value) => ConditionalSelection_ValueDef_() .
                             selection(sel) . value(value)
     }
   }

@@ -3,7 +3,7 @@
  *  RW Penney, November 2017
  */
 
-//  Copyright (C) 2017, RW Penney
+//  Copyright (C) 2017-2018, RW Penney
 //  This file is part of VL4S.
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -48,7 +48,7 @@ object VersionedSource {
 object Generator {
   case class Config(
     schemaUrl: String = "",
-    schemaVersion: String = "2.0.4",
+    schemaVersion: String = "2.1.2",
     srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
   )
   val defaultConfig = Config()

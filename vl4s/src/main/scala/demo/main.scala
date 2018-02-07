@@ -3,7 +3,7 @@
  *  RW Penney, November 2017
  */
 
-//  Copyright (C) 2017, RW Penney
+//  Copyright (C) 2017-2018, RW Penney
 //  This file is part of VL4S.
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -80,7 +80,7 @@ object WaveDemo extends SpecGenerator with BesselCalc {
           field("y")) .
         color(MarkPropFieldDefWithCondition() .
           field("func") .
-          vtype(Type.nominal)))
+          vtype(BasicType.nominal)))
   }
 }
 
@@ -137,20 +137,20 @@ object GaussMixDemo extends SpecGenerator {
             axis(Axis() .
               title("location")) .
             field("x") .
-            vtype(Type.quantitative) .
+            vtype(BasicType.quantitative) .
             bin(BinParams() .
               maxbins(20))) .
           y(enc.XYaxisDef .
             axis(Axis() .
               title("count")) .
             field("*") .
-            vtype(Type.quantitative) .
+            vtype(BasicType.quantitative) .
             aggregate(AggregateOp.count)) .
           color(MarkPropValueDefWithCondition() .
-            condition(Conditional_MarkPropFieldDef_() .
+            condition(new Conditional_MarkPropFieldDef_(ConditionalSelection_MarkPropFieldDef_() .
               field("label") .
               selection("chosen") .
-              vtype(Type.nominal)) .
+              vtype(BasicType.nominal))) .
             value("grey"))
         }
       )
