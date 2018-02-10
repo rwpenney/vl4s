@@ -18,6 +18,8 @@ import scala.annotation.tailrec
 
 /** Mechanism for converting a VegaLite type into Scala source-code */
 trait TypeCoder {
+  type TypeInfoMap = Map[String, VLtypeDefn]
+
   /** The Scala typename */
   def typename: String
 
@@ -25,13 +27,15 @@ trait TypeCoder {
   def targetname: String = typename
 
   /** Generate source-code for this type */
-  def toCode(recursive: Boolean = true): String
+  def toCode(allTypes: TypeInfoMap = Map.empty,
+             recursive: Boolean = true): String
 }
 
 
 /** Helper methods for converting container types into Scala source-code */
 trait ParentCoder {
   def makeHelperClasses(roots: Seq[VLtypeDefn],
+                        allTypes: Map[String, VLtypeDefn] = Map.empty,
                         recursive: Boolean = true): Option[String] = {
     val locals = if (recursive) VLtypeDefn.expandDependencies(roots)
                  else roots
@@ -39,7 +43,7 @@ trait ParentCoder {
     if (locals.nonEmpty) {
       Some(locals.map { CodeGen.toCodeable(_) } .
             flatMap { c =>
-              val codetext = c.toCode()
+              val codetext = c.toCode(allTypes)
               if (codetext.nonEmpty) Some(codetext) else None } .
             mkString("\n"))
     } else {
@@ -51,20 +55,20 @@ trait ParentCoder {
 
 class EmptyCoder extends TypeCoder {
   def typename = "[EMPTY]"
-  def toCode(recursive: Boolean = true) = ""
+  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
 }
 
 
 class NullCoder(defn: VLnullType) extends TypeCoder {
   override def typename = "Null"
-  def toCode(recursive: Boolean = true) = ""
+  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
 }
 
 
 class BareCoder(defn: VLbareType) extends TypeCoder {
   override def targetname = CodeGen.mapBareTypes.getOrElse(defn.name, defn.name)
   def typename = CodeGen.cleanClassName(targetname)
-  def toCode(recursive: Boolean = true) = ""
+  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
 }
 
 
@@ -73,8 +77,8 @@ class ArrayCoder(defn: VLarrayOf) extends TypeCoder with ParentCoder {
 
   def typename = CodeGen.cleanClassName(defn.name)
   override def targetname = s"Seq[${itemtype}]"
-  def toCode(recursive: Boolean = true) =
-    makeHelperClasses(Seq(defn.vltype)).getOrElse("")
+  def toCode(allTypes: TypeInfoMap = Map.empty, recursive: Boolean = true) =
+    makeHelperClasses(Seq(defn.vltype), allTypes).getOrElse("")
 }
 
 
@@ -83,15 +87,16 @@ class MapCoder(defn: VLmapOf) extends TypeCoder with ParentCoder {
 
   def typename = CodeGen.cleanClassName(defn.name)
   override def targetname = s"Map[String, ${itemtype}]"
-  def toCode(recursive: Boolean = true) =
-    makeHelperClasses(Seq(defn.vltype)).getOrElse("")
+  def toCode(allTypes: TypeInfoMap = Map.empty, recursive: Boolean = true) =
+    makeHelperClasses(Seq(defn.vltype), allTypes).getOrElse("")
 }
 
 
 class EnumCoder(defn: VLenumDefn) extends TypeCoder {
   def typename = defn.name
 
-  def toCode(recursive: Boolean = true): String = {
+  def toCode(ti: TypeInfoMap = Map.empty,
+             recursive: Boolean = true): String = {
     val terms = defn.values.map { term =>
       s"""|  final val ${cleanName(term)} = new ${typename}(term = "${term}")"""
     } . mkString("\n")
@@ -115,21 +120,47 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
 
-  def toCode(recursive: Boolean = true): String = {
+  def toCode(allTypes: TypeInfoMap = Map.empty,
+             recursive: Boolean = true): String = {
     val options = defn.options.map { opt => {
-      val cdbl = CodeGen.toCodeable(opt)
-        s"""|  implicit def from${cdbl.typename}(_arg: ${cdbl.targetname}) =
-            |    new ${typename}(choice = _arg)""" . stripMargin
-      }
-    } . mkString("\n")
+        val cdbl = CodeGen.toCodeable(opt)
 
-    Seq(if (recursive) makeHelperClasses(defn.options) else None,
+        // FIXME - recurse if opt~AnyOf?
+        refsAnyOf(opt, allTypes) match {
+          case Some(child) => println(s"  **  ${defn} -> ${child}")
+          case None =>
+        }
+        Seq(
+          Some(s"  implicit def from${cdbl.typename}"
+                + s"(_arg: ${cdbl.targetname}) =\n"
+                + s"    new ${typename}(choice = _arg)")
+        ) . flatten
+      }
+    } . flatten . mkString("\n")
+
+    Seq(if (recursive) makeHelperClasses(defn.options, allTypes) else None,
         Some(s"""|class ${typename}(val choice: Any) extends JsonExporter {
                  |  def toJValue = exportTerm(choice) }""" . stripMargin),
         Some(s"object ${typename} {"),
         Some(options),
         Some("}")) . flatten . mkString("", "\n", "\n\n")
   }
+
+  def refsAnyOf(opt: VLtypeDefn, allTypes: TypeInfoMap): Option[VLanyOf] =
+    opt match {
+      case ref: VLobjRef =>
+        ref.target match {
+          case child: VLanyOf => Some(child)
+          case bare: VLbareType => {
+            allTypes.get(bare.name) match {
+              case Some(child: VLanyOf) => Some(child)
+              case _ => None
+            }
+          }
+          case _ => None
+        }
+      case _ => None
+    }
 }
 
 
@@ -144,12 +175,14 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
     ( prop.name, CodeGen.mapReserved.getOrElse(prop.name, prop.name) )
   } . toMap
 
-  def toCode(recursive: Boolean = true): String = {
+  def toCode(allTypes: TypeInfoMap = Map.empty,
+             recursive: Boolean = true): String = {
     val markers = makeMarkers()
     val propsetters = defn.properties.map { prop =>
       makePropMethod(prop) } .mkString("\n")
 
-    Seq(makeHelperClasses(defn.properties.map { _.vltype }, recursive=false),
+    Seq(makeHelperClasses(defn.properties.map { _.vltype },
+                          allTypes, recursive=false),
         Some(s"case class ${typename}" +
               "(_properties: Map[String, Any] = Map.empty)" +
               s"\n    extends JsonExporter ${markers}{"),
@@ -194,7 +227,7 @@ class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
   val targetcoder = CodeGen.toCodeable(defn.target)
   override def targetname = CodeGen.cleanClassName(targetcoder.targetname)
 
-  def toCode(recursive: Boolean = true) = ""
+  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
 
   def toAliasCode(recursive: Boolean = true) = {
     s"""object ${typename} {
@@ -208,22 +241,11 @@ class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
 
 class CodeGen(val stream: OutputStream) {
   def apply(schema: VLschema) {
+    val warning = "/* AUTOGENERATED by VL4S - do not edit by hand */"
     val pw = new PrintWriter(stream)
 
-    val warning = "/* AUTOGENERATED by VL4S - do not edit by hand */\n"
-
-    pw.print(warning)
-    pw.print(s"""
-             |package uk.rwpenney.vl4s
-             |
-             |import org.json4s.{ JString, JValue }
-             |import scala.language.implicitConversions
-             |
-             |object MetaData {
-             |  val schemaVersion: String = "${schema.version}"
-             |}
-             |
-             |""" . stripMargin)
+    pw.println(warning)
+    pw.print(makeHeader(schema))
 
     pw.print(CodeGen.markerInterfaces.map {
                 case (re, mrk) => s"trait ${mrk} extends JsonExporter" } .
@@ -235,12 +257,15 @@ class CodeGen(val stream: OutputStream) {
       case None =>
     }
 
+    val allTypes = schema.types.filter(!_.isInstanceOf[VLbareType]).map {
+      t => t.name → t } . toMap
+
     schema.types.foreach { vltype =>
       vltype match {
         case or: VLobjRef =>  // top-level references handled by makeTypeRefs()
         case _ => {
           val codeable = CodeGen.toCodeable(vltype)
-          val codetext = codeable.toCode(recursive=true)
+          val codetext = codeable.toCode(allTypes, recursive=true)
 
           if (codetext.nonEmpty) {
             pw.print(s"\n${codetext}")
@@ -249,9 +274,21 @@ class CodeGen(val stream: OutputStream) {
       }
     }
 
-    pw.print("\n" + warning)
+    pw.println("\n" + warning)
     pw.close()
   }
+
+  def makeHeader(schema: VLschema): String =
+    s"""|package uk.rwpenney.vl4s
+        |
+        |import org.json4s.{ JString, JValue }
+        |import scala.language.implicitConversions
+        |
+        |object MetaData {
+        |  val schemaVersion: String = "${schema.version}"
+        |}
+        |
+        |""" . stripMargin
 }
 
 

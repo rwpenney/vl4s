@@ -131,13 +131,13 @@ object SchemaParser {
     defns
   }
 
-  def objToMap(obj: JValue): Map[String, JValue] = {
+  private def objToMap(obj: JValue): Map[String, JValue] = {
     val JObject(items) = obj
     items.map {
       case JField(field, value) => (field, value) } .toMap
   }
 
-  /** Extract single Vega-Lite type definition */
+  /** Recursively extract single Vega-Lite type definition */
   def parseTypeDefn(vlTypeName: String,
                     spec: Map[String, JValue]): VLtypeDefn = {
     spec match {
