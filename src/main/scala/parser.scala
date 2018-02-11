@@ -99,6 +99,11 @@ case class VLobjRef(val alias: String,
 /** Representation of all VegaLite types extracted from a JSON schema */
 class VLschema(val types: Seq[VLtypeDefn], val version: String) {
 
+  /** Lookup table of type definitions indexed by name */
+  val names: Map[String, VLtypeDefn] = types .
+    filter(!_.isInstanceOf[VLbareType]) .
+    map { t => t.name → t } . toMap
+
   /** Extract all top-level object references (likely to need typedefs) */
   def objRefs: Seq[VLtypeDefn] = {
     types.flatMap { x =>
@@ -109,6 +114,11 @@ class VLschema(val types: Seq[VLtypeDefn], val version: String) {
       }
     }
   }
+}
+
+
+object VLschema {
+  val empty = new VLschema(Nil, "EMPTY")
 }
 
 

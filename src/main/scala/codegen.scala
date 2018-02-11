@@ -18,8 +18,6 @@ import scala.annotation.tailrec
 
 /** Mechanism for converting a VegaLite type into Scala source-code */
 trait TypeCoder {
-  type TypeInfoMap = Map[String, VLtypeDefn]
-
   /** The Scala typename */
   def typename: String
 
@@ -27,7 +25,7 @@ trait TypeCoder {
   def targetname: String = typename
 
   /** Generate source-code for this type */
-  def toCode(allTypes: TypeInfoMap = Map.empty,
+  def toCode(schema: VLschema = VLschema.empty,
              recursive: Boolean = true): String
 }
 
@@ -35,7 +33,7 @@ trait TypeCoder {
 /** Helper methods for converting container types into Scala source-code */
 trait ParentCoder {
   def makeHelperClasses(roots: Seq[VLtypeDefn],
-                        allTypes: Map[String, VLtypeDefn] = Map.empty,
+                        schema: VLschema = VLschema.empty,
                         recursive: Boolean = true): Option[String] = {
     val locals = if (recursive) VLtypeDefn.expandDependencies(roots)
                  else roots
@@ -43,7 +41,7 @@ trait ParentCoder {
     if (locals.nonEmpty) {
       Some(locals.map { CodeGen.toCodeable(_) } .
             flatMap { c =>
-              val codetext = c.toCode(allTypes)
+              val codetext = c.toCode(schema)
               if (codetext.nonEmpty) Some(codetext) else None } .
             mkString("\n"))
     } else {
@@ -55,20 +53,20 @@ trait ParentCoder {
 
 class EmptyCoder extends TypeCoder {
   def typename = "[EMPTY]"
-  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
+  def toCode(vs: VLschema = VLschema.empty, recursive: Boolean = true) = ""
 }
 
 
 class NullCoder(defn: VLnullType) extends TypeCoder {
   override def typename = "Null"
-  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
+  def toCode(vs: VLschema = VLschema.empty, recursive: Boolean = true) = ""
 }
 
 
 class BareCoder(defn: VLbareType) extends TypeCoder {
   override def targetname = CodeGen.mapBareTypes.getOrElse(defn.name, defn.name)
   def typename = CodeGen.cleanClassName(targetname)
-  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
+  def toCode(vs: VLschema = VLschema.empty, recursive: Boolean = true) = ""
 }
 
 
@@ -77,8 +75,8 @@ class ArrayCoder(defn: VLarrayOf) extends TypeCoder with ParentCoder {
 
   def typename = CodeGen.cleanClassName(defn.name)
   override def targetname = s"Seq[${itemtype}]"
-  def toCode(allTypes: TypeInfoMap = Map.empty, recursive: Boolean = true) =
-    makeHelperClasses(Seq(defn.vltype), allTypes).getOrElse("")
+  def toCode(schema: VLschema = VLschema.empty, recursive: Boolean = true) =
+    makeHelperClasses(Seq(defn.vltype), schema).getOrElse("")
 }
 
 
@@ -87,15 +85,15 @@ class MapCoder(defn: VLmapOf) extends TypeCoder with ParentCoder {
 
   def typename = CodeGen.cleanClassName(defn.name)
   override def targetname = s"Map[String, ${itemtype}]"
-  def toCode(allTypes: TypeInfoMap = Map.empty, recursive: Boolean = true) =
-    makeHelperClasses(Seq(defn.vltype), allTypes).getOrElse("")
+  def toCode(schema: VLschema = VLschema.empty, recursive: Boolean = true) =
+    makeHelperClasses(Seq(defn.vltype), schema).getOrElse("")
 }
 
 
 class EnumCoder(defn: VLenumDefn) extends TypeCoder {
   def typename = defn.name
 
-  def toCode(ti: TypeInfoMap = Map.empty,
+  def toCode(vs: VLschema = VLschema.empty,
              recursive: Boolean = true): String = {
     val terms = defn.values.map { term =>
       s"""|  final val ${cleanName(term)} = new ${typename}(term = "${term}")"""
@@ -120,13 +118,13 @@ class EnumCoder(defn: VLenumDefn) extends TypeCoder {
 class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
 
-  def toCode(allTypes: TypeInfoMap = Map.empty,
+  def toCode(schema: VLschema = VLschema.empty,
              recursive: Boolean = true): String = {
     val options = defn.options.map { opt => {
         val cdbl = CodeGen.toCodeable(opt)
 
         // FIXME - recurse if opt~AnyOf?
-        refsAnyOf(opt, allTypes) match {
+        refsAnyOf(opt, schema) match {
           case Some(child) => println(s"  **  ${defn} -> ${child}")
           case None =>
         }
@@ -138,7 +136,7 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
       }
     } . flatten . mkString("\n")
 
-    Seq(if (recursive) makeHelperClasses(defn.options, allTypes) else None,
+    Seq(if (recursive) makeHelperClasses(defn.options, schema) else None,
         Some(s"""|class ${typename}(val choice: Any) extends JsonExporter {
                  |  def toJValue = exportTerm(choice) }""" . stripMargin),
         Some(s"object ${typename} {"),
@@ -146,13 +144,13 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
         Some("}")) . flatten . mkString("", "\n", "\n\n")
   }
 
-  def refsAnyOf(opt: VLtypeDefn, allTypes: TypeInfoMap): Option[VLanyOf] =
+  def refsAnyOf(opt: VLtypeDefn, schema: VLschema): Option[VLanyOf] =
     opt match {
       case ref: VLobjRef =>
         ref.target match {
           case child: VLanyOf => Some(child)
           case bare: VLbareType => {
-            allTypes.get(bare.name) match {
+            schema.names.get(bare.name) match {
               case Some(child: VLanyOf) => Some(child)
               case _ => None
             }
@@ -175,14 +173,14 @@ class OperatorCoder(defn: VLopDefn) extends TypeCoder with ParentCoder {
     ( prop.name, CodeGen.mapReserved.getOrElse(prop.name, prop.name) )
   } . toMap
 
-  def toCode(allTypes: TypeInfoMap = Map.empty,
+  def toCode(schema: VLschema = VLschema.empty,
              recursive: Boolean = true): String = {
     val markers = makeMarkers()
     val propsetters = defn.properties.map { prop =>
       makePropMethod(prop) } .mkString("\n")
 
     Seq(makeHelperClasses(defn.properties.map { _.vltype },
-                          allTypes, recursive=false),
+                          schema, recursive=false),
         Some(s"case class ${typename}" +
               "(_properties: Map[String, Any] = Map.empty)" +
               s"\n    extends JsonExporter ${markers}{"),
@@ -227,7 +225,7 @@ class ObjRefCoder(defn: VLobjRef) extends TypeCoder {
   val targetcoder = CodeGen.toCodeable(defn.target)
   override def targetname = CodeGen.cleanClassName(targetcoder.targetname)
 
-  def toCode(ti: TypeInfoMap = Map.empty, recursive: Boolean = true) = ""
+  def toCode(vs: VLschema = VLschema.empty, recursive: Boolean = true) = ""
 
   def toAliasCode(recursive: Boolean = true) = {
     s"""object ${typename} {
@@ -257,15 +255,12 @@ class CodeGen(val stream: OutputStream) {
       case None =>
     }
 
-    val allTypes = schema.types.filter(!_.isInstanceOf[VLbareType]).map {
-      t => t.name → t } . toMap
-
     schema.types.foreach { vltype =>
       vltype match {
         case or: VLobjRef =>  // top-level references handled by makeTypeRefs()
         case _ => {
           val codeable = CodeGen.toCodeable(vltype)
-          val codetext = codeable.toCode(allTypes, recursive=true)
+          val codetext = codeable.toCode(schema, recursive=true)
 
           if (codetext.nonEmpty) {
             pw.print(s"\n${codetext}")
