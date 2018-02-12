@@ -64,20 +64,20 @@ val spec = SimpleSpec() .
         axis(Axis() .
           title("log(size)")) .
         field("logSize") .
-        vtype(Type.quantitative) .
+        vtype(BasicType.quantitative) .
         bin(BinParams() .
           maxbins(20))) .
       y(enc.XYaxisDef .
         axis(Axis() .
           title("count")) .
         field("*") .
-        vtype(Type.quantitative) .
+        vtype(BasicType.quantitative) .
         aggregate(AggregateOp.count)) .
       color(MarkPropValueDefWithCondition() .
-        condition(Conditional_MarkPropFieldDef_() .
+        condition(ConditionalSelection_MarkPropFieldDef_() .
           field("simpleSection") .
           selection("chosen") .
-          vtype(Type.nominal)) .
+          vtype(BasicType.nominal)) .
         value("grey"))
     }
   )

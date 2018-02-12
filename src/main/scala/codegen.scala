@@ -123,16 +123,19 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
     val options = defn.options.map { opt => {
         val cdbl = CodeGen.toCodeable(opt)
 
-        // FIXME - recurse if opt~AnyOf?
-        refsAnyOf(opt, schema) match {
-          case Some(child) => println(s"  **  ${defn} -> ${child}")
-          case None =>
-        }
-        Seq(
-          Some(s"  implicit def from${cdbl.typename}"
-                + s"(_arg: ${cdbl.targetname}) =\n"
-                + s"    new ${typename}(choice = _arg)")
-        ) . flatten
+        // Generate implicit conversions from both our own AnyOf cases,
+        // and the first generation of children that are themselves AnyOfs:
+        ( s"  implicit def from${cdbl.typename}"
+            + s"(_arg: ${cdbl.targetname}) =\n"
+            + s"    new ${typename}(choice = _arg)" ) +:
+        ( refsAnyOf(opt, schema) match {
+            case Some(ref) => ref.options.map { child =>
+                val childcdbl = CodeGen.toCodeable(child)
+                s"  implicit   def from${childcdbl.targetname}" +
+                  s"(_arg: ${childcdbl.targetname}) =\n" +
+                  s"    new ${typename}" +
+                  s"(choice = new ${cdbl.targetname}(_arg))" }
+            case None => Nil } )
       }
     } . flatten . mkString("\n")
 
@@ -144,6 +147,7 @@ class AnyOfCoder(defn: VLanyOf) extends TypeCoder with ParentCoder {
         Some("}")) . flatten . mkString("", "\n", "\n\n")
   }
 
+  /** Check if one of our options refers to someting that is itself an AnyOf */
   def refsAnyOf(opt: VLtypeDefn, schema: VLschema): Option[VLanyOf] =
     opt match {
       case ref: VLobjRef =>

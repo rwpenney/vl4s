@@ -147,10 +147,10 @@ object GaussMixDemo extends SpecGenerator {
             vtype(BasicType.quantitative) .
             aggregate(AggregateOp.count)) .
           color(MarkPropValueDefWithCondition() .
-            condition(new Conditional_MarkPropFieldDef_(ConditionalSelection_MarkPropFieldDef_() .
+            condition(ConditionalSelection_MarkPropFieldDef_() .
               field("label") .
               selection("chosen") .
-              vtype(BasicType.nominal))) .
+              vtype(BasicType.nominal)) .
             value("grey"))
         }
       )
