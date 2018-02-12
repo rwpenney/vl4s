@@ -53,10 +53,13 @@ case class HtmlSettings(
 )
 
 
+/** Helpers for generating HTML content from a plot specification */
 object ExportImplicits {
+  /** Decorate TopLevelSpec with html-generating methods */
   implicit class HtmlExporter(spec: TopLevelSpec) {
     import org.json4s.native.JsonMethods.{ compact, pretty, render }
 
+    /** Generate list of URLs for javascript libraries needed for rendering */
     def jsLibraries(implicit config: HtmlSettings): Seq[String] = {
       val pfx = config.cdnUrlPrefix
       Seq(s"${pfx}/vega/3.0.9/vega.js",
@@ -64,6 +67,7 @@ object ExportImplicits {
           s"${pfx}/vega-embed/3.0.0-rc7/vega-embed.js")
     }
 
+    /** Generate <script/> block for webpage containing Vega dependencies */
     def jsImports(indent: String = "")
                  (implicit config: HtmlSettings): String = {
       jsLibraries(config).map {
@@ -71,6 +75,7 @@ object ExportImplicits {
       mkString("\n")
     }
 
+    /** Generate an entire html page for the plot */
     def htmlPage(headerPrefix: String = "", bodyPrefix: String = "")
                 (implicit config: HtmlSettings): String = {
       val ident = makeIdent
@@ -89,6 +94,7 @@ object ExportImplicits {
           |</html>""" . stripMargin
     }
 
+    /** Generate an html-div block for use within a webpage */
     def htmlDiv(ident: String, jsvarname: String = "vegaSpec")
                (implicit config: HtmlSettings): String = {
       val layout = if (config.prettyJson) pretty _ else compact _
@@ -109,6 +115,7 @@ object ExportImplicits {
           |</script>""" . stripMargin
     }
 
+    /** Generate an iframe block for use within a webpage */
     def htmlIframe()(implicit config: HtmlSettings): String = {
       val ident = makeIdent + "-iframe"
       s"""|<iframe id="${ident}"
@@ -131,6 +138,7 @@ object ExportImplicits {
           |</script>""" . stripMargin
     }
 
+    /** Generate pseudo-random identifier for javascript variables */
     def makeIdent: String = "vl4s-" + java.util.UUID.randomUUID.toString
   }
 }
