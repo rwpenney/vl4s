@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature"),
-  version := "0.4-SNAPSHOT",
+  version := "0.4.1-SNAPSHOT",
   organization := "uk.rwpenney",
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
@@ -44,5 +44,17 @@ lazy val vl4s = (project in file("vl4s")) .
   settings(commonSettings: _*) .
   settings(
     name := "vl4s",
+    scalaVersion := "2.12.4",
+    libraryDependencies ++= Seq(
+      "org.json4s" %% "json4s-native" % "3.2.11"
+    )
+  )
+
+
+lazy val `vl4s-demo` = (project in file("vl4s-demo")) .
+  dependsOn(vl4s) .
+  settings(commonSettings: _*) .
+  settings(
+    name := "vl4s-demo",
     scalaVersion := "2.12.4"
   )

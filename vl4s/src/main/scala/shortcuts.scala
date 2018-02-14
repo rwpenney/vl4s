@@ -12,24 +12,6 @@ object ShortcutImplicits {
   implicit def dataFromRawUrl(rawUrl: String): Data = {
     new Data(UrlData() . url(rawUrl))
   }
-
-  implicit def markFieldCondFromMap(conditions: Map[String, String]):
-      MarkPropFieldDefWithCondition_condition = {
-    new MarkPropFieldDefWithCondition_condition(toConditionalSeq(conditions))
-  }
-
-  implicit def markValCondFromMap(conditions: Map[String, String]):
-      MarkPropValueDefWithCondition_condition = {
-    new MarkPropValueDefWithCondition_condition(toConditionalSeq(conditions))
-  }
-
-  def toConditionalSeq(conditions: Map[String, String]):
-      Seq[ConditionalSelection_ValueDef_] = {
-    conditions.toSeq.map {
-      case (sel, value) => ConditionalSelection_ValueDef_() .
-                            selection(sel) . value(value)
-    }
-  }
 }
 
 

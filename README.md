@@ -31,8 +31,7 @@ and consists of two projects:
   and allows creation of VegaLite JSON documents from
   a user-supplied plot specification.
 
-The tool is currently at an early stage of development,
-but already supports the entire Vega-Lite 2.0 grammar,
+The tool supports the entire Vega-Lite 2.1 grammar,
 including generation of interactive line plots,
 and histograms with aggregation operations, repeats, selections, etc.
 
