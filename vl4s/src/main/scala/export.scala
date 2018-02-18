@@ -62,9 +62,9 @@ object ExportImplicits {
     /** Generate list of URLs for javascript libraries needed for rendering */
     def jsLibraries(implicit config: HtmlSettings): Seq[String] = {
       val pfx = config.cdnUrlPrefix
-      Seq(s"${pfx}/vega/3.0.9/vega.js",
+      Seq(s"${pfx}/vega/3.0.10/vega.js",
           s"${pfx}/vega-lite/${MetaData.schemaVersion}/vega-lite.js",
-          s"${pfx}/vega-embed/3.0.0-rc7/vega-embed.js")
+          s"${pfx}/vega-embed/3.0.0/vega-embed.js")
     }
 
     /** Generate <script/> block for webpage containing Vega dependencies */
