@@ -48,7 +48,7 @@ object VersionedSource {
 object Generator {
   case class Config(
     schemaUrl: String = "",
-    schemaVersion: String = "2.1.3",
+    schemaVersion: String = "2.3.1",
     srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
   )
   val defaultConfig = Config()

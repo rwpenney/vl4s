@@ -79,9 +79,9 @@ package uk.rwpenney
 package object vl4s {
   val CompuSpec = CompositeUnitSpecAlias
 
-  val FacetedUnitSpec = TopLevel_FacetedUnitSpec_
-  val RepeatedSpec =    TopLevel_RepeatSpec_
-  val SimpleSpec =      TopLevel_FacetedUnitSpec_
+  val FacetedUnitSpec = TopLevelFacetedUnitSpec
+  val RepeatedSpec =    TopLevelRepeatSpec
+  val SimpleSpec =      TopLevelFacetedUnitSpec
 
 
   /** Helpers for displaying plots in Apache Zeppelin notebooks */
