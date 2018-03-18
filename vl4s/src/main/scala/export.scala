@@ -58,13 +58,14 @@ object ExportImplicits {
   /** Decorate TopLevelSpec with html-generating methods */
   implicit class HtmlExporter(spec: TopLevelSpec) {
     import org.json4s.native.JsonMethods.{ compact, pretty, render }
+    import uk.rwpenney.vl4s.build.VegaConfig
 
     /** Generate list of URLs for javascript libraries needed for rendering */
     def jsLibraries(implicit config: HtmlSettings): Seq[String] = {
       val pfx = config.cdnUrlPrefix
-      Seq(s"${pfx}/vega/3.0.10/vega.js",
+      Seq(s"${pfx}/vega/${VegaConfig.vegaJSlibraryVersion}/vega.js",
           s"${pfx}/vega-lite/${MetaData.schemaVersion}/vega-lite.js",
-          s"${pfx}/vega-embed/3.0.0/vega-embed.js")
+          s"${pfx}/vega-embed/${VegaConfig.vegaEmbedJSlibraryVersion}/vega-embed.js")
     }
 
     /** Generate <script/> block for webpage containing Vega dependencies */

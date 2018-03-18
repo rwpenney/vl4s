@@ -46,9 +46,11 @@ object VersionedSource {
 
 
 object Generator {
+  import uk.rwpenney.vl4s.build.VegaConfig
+
   case class Config(
     schemaUrl: String = "",
-    schemaVersion: String = "2.3.1",
+    schemaVersion: String = VegaConfig.defaultSchemaVersion,
     srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
   )
   val defaultConfig = Config()

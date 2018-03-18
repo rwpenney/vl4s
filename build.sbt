@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature"),
-  version := "0.5-SNAPSHOT",
+  version := "0.5.1-SNAPSHOT",
   organization := "uk.rwpenney",
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
@@ -24,6 +24,13 @@ lazy val commonSettings = Seq(
 )
 
 
+def copyVegaConfig(tgtdir: File): Seq[File] = {
+  val srcs = Seq("VegaConfig.scala")
+  IO.createDirectory(tgtdir)
+  IO.copy(srcs.map { s => (root.base / "project" / s, tgtdir / s) }).toSeq
+}
+
+
 lazy val root = (project in file(".")) .
   settings(commonSettings: _*) .
   settings(
@@ -34,20 +41,24 @@ lazy val root = (project in file(".")) .
       "com.github.scopt" %% "scopt" % "3.5.+",
       "org.json4s" %% "json4s-native" % "3.2.11",
       "org.scalatest" %% "scalatest" % "3.0.+" % "test"
-    )
+    ),
+    sourceGenerators in Compile += Def.task {
+      copyVegaConfig((sourceManaged in Compile).value)
+    }.taskValue
   )
 
 
 lazy val vl4s = (project in file("vl4s")) .
-  dependsOn(root) .
-  aggregate(root) .
   settings(commonSettings: _*) .
   settings(
     name := "vl4s",
     scalaVersion := "2.12.4",
     libraryDependencies ++= Seq(
       "org.json4s" %% "json4s-native" % "3.2.11"
-    )
+    ),
+    sourceGenerators in Compile += Def.task {
+      copyVegaConfig((sourceManaged in Compile).value)
+    }.taskValue
   )
 
 
