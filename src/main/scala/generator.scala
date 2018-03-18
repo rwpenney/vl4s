@@ -51,19 +51,23 @@ object Generator {
   case class Config(
     schemaUrl: String = "",
     schemaVersion: String = VegaConfig.defaultSchemaVersion,
-    srcOutput: String = "vl4s/src/main/scala/auto-vega.scala"
+    srcOutput: String = "vl4s/src/main/scala/" + VegaConfig.defaultAutogenSource
   )
   val defaultConfig = Config()
 
   def main(args: Array[String]) {
     val optparse = new scopt.OptionParser[Config]("vl4s-generator") {
+      opt[String]('o', "output-src") .
+        action( (x, c) => c.copy(srcOutput = x) ).
+        text("Filename of output scala source-code" +
+              s" (default=${defaultConfig.srcOutput})")
       opt[String]('s', "schema-url") .
         action( (x, c) => c.copy(schemaUrl = x) ) .
         text(s"URL of Vega-Lite schema (default=${defaultConfig.schemaUrl})")
       opt[String]('V', "schema-version") .
         action( (x, c) => c.copy(schemaVersion = x) ) .
         text("Release version of Vega-Lite schema to read from github.com" +
-              s"(default=${defaultConfig.schemaVersion})")
+              s" (default=${defaultConfig.schemaVersion})")
 
       help("help").text("Print usage information")
       override def showUsageOnError = true

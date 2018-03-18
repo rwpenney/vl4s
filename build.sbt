@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature"),
-  version := "0.5.1-SNAPSHOT",
+  version := "0.5.2-SNAPSHOT",
   organization := "uk.rwpenney",
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
@@ -57,6 +57,15 @@ lazy val vl4s = (project in file("vl4s")) .
       "org.json4s" %% "json4s-native" % "3.2.11"
     ),
     sourceGenerators in Compile += Def.task {
+      import uk.rwpenney.vl4s.build.VegaConfig
+      val autofile = (scalaSource in Compile).value /
+                        VegaConfig.defaultAutogenSource
+      if (!autofile.exists) {
+        println(s"""|WARNING - ${autofile} does not exist
+                    | ^  Try running root (vl4s-generator) project to convert
+                    | ^  VegaLite schema into Scala source-code"""
+                .stripMargin('|'))
+      }
       copyVegaConfig((sourceManaged in Compile).value)
     }.taskValue
   )
@@ -67,5 +76,8 @@ lazy val `vl4s-demo` = (project in file("vl4s-demo")) .
   settings(commonSettings: _*) .
   settings(
     name := "vl4s-demo",
-    scalaVersion := "2.12.4"
+    scalaVersion := "2.12.4",
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "3.5.+"
+    )
   )
