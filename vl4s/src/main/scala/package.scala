@@ -76,14 +76,8 @@ package uk.rwpenney
  *  [[EncodingWithFacet]]
  *  [[PositionFieldDef]]
  */
-package object vl4s {
+package object vl4s extends Vl4sSpecAliases {
   val CompuSpec = CompositeUnitSpecAlias
-
-  val FacetedUnitSpec = TopLevelFacetedUnitSpec
-  val RepeatedSpec =    TopLevelRepeatSpec
-  val SimpleSpec =      TopLevelFacetedUnitSpec
-  // FIXME - convert to auto-generated map to improved compatibility with differently named classes in schemata before version 2.3
-
 
   /** Helpers for displaying plots in Apache Zeppelin notebooks */
   object ZeppelinImplicits {

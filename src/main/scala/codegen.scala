@@ -273,6 +273,8 @@ class CodeGen(val stream: OutputStream) {
       }
     }
 
+    pw.print(makeSpecAliases(schema))
+
     pw.println("\n" + warning)
     pw.close()
   }
@@ -288,6 +290,30 @@ class CodeGen(val stream: OutputStream) {
         |}
         |
         |""" . stripMargin
+
+  /** Convert TopLevelSpec typenames into package-level aliases */
+  def makeSpecAliases(schema: VLschema): String = {
+    val aliases = schema.types.flatMap {
+      case op: VLopDefn => {
+        CodeGen.specAliasRegexps.flatMap { case (regexp, alias) =>
+          regexp.findFirstIn(op.name) match {
+            case Some(_) => {
+              val codeable = CodeGen.toCodeable(op)
+              Some(alias -> codeable.typename)
+            }
+            case None => None
+          }
+        }
+      }
+      case _ => Seq.empty
+    } . toMap
+
+    Seq(Seq("trait Vl4sSpecAliases {"),
+        aliases.map { case (alias, typename) =>
+          s"  val ${alias} = ${typename}"
+        },
+        Seq("}\n")) . flatten . mkString("\n")
+  }
 }
 
 
@@ -358,4 +384,11 @@ object CodeGen {
   )
 
   val allMixins = markerInterfaces ++ shorthandInterfaces
+
+  /** Regular expressions for VegaLite Spec names and VL4S shorthand aliases */
+  val specAliasRegexps = Map(
+    raw"^TopLevel<?FacetedUnitSpec>?".r →         "FacetedUnitSpec",
+    raw"^TopLevel<?Repeat(Spec)?>?".r →           "RepeatedSpec",
+    raw"^TopLevel<?FacetedUnitSpec>?".r →         "SimpleSpec"
+  )
 }

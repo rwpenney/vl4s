@@ -26,7 +26,7 @@ and consists of two projects:
   the file "vl4s/src/main/scala/auto-vega.scala"
   from either the upstream VegaLite schema based on a version-number
   supplied with the "-V" command-line argument,
-  or a local copy of a schema file (e.g. "v2.3.1.json")
+  or a local copy of a schema file (e.g. "v2.1.3.json")
 * the "vl4s" project, which will build the VegaLite API itself,
   and allows creation of VegaLite JSON documents from
   a user-supplied plot specification.
