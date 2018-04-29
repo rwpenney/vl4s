@@ -55,8 +55,8 @@ case class HtmlSettings(
 
 /** Helpers for generating HTML content from a plot specification */
 object ExportImplicits {
-  /** Decorate TopLevelSpec with html-generating methods */
-  implicit class HtmlExporter(spec: TopLevelSpec) {
+  /** Decorate Vl4sTopLevelSpec with html-generating methods */
+  implicit class HtmlExporter(spec: Vl4sTopLevelSpec) {
     import org.json4s.native.JsonMethods.{ compact, pretty, render }
     import uk.rwpenney.vl4s.build.VegaConfig
 

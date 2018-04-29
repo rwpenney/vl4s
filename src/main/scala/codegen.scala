@@ -349,7 +349,7 @@ object CodeGen {
 
   /** Marker traits to apply to VegaLite operators based on classname regexps */
   val markerInterfaces = Map(
-    raw"^TopLevel".r -> "TopLevelSpec"
+    raw"^TopLevel".r -> "Vl4sTopLevelSpec"
   )
 
   /** Mixins to apply to VegaLite operators based on classname regexps */

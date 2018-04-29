@@ -66,7 +66,7 @@ package uk.rwpenney
  *  from the Vega-Lite schema is extracted from the schema itself.
  *
  *  Some additional hand-written classes are also provided
- *  to assist with generating html web-pages from a [[TopLevelSpec]],
+ *  to assist with generating html web-pages from a [[Vl4sTopLevelSpec]],
  *  such as the [[ExportImplicits.HtmlExporter]].
  *
  *  == Key classes ==
@@ -82,13 +82,14 @@ package object vl4s {
   val FacetedUnitSpec = TopLevelFacetedUnitSpec
   val RepeatedSpec =    TopLevelRepeatSpec
   val SimpleSpec =      TopLevelFacetedUnitSpec
+  // FIXME - convert to auto-generated map to improved compatibility with differently named classes in schemata before version 2.3
 
 
   /** Helpers for displaying plots in Apache Zeppelin notebooks */
   object ZeppelinImplicits {
     import vl4s.ExportImplicits.HtmlExporter
     var htmlSettings = vl4s.HtmlSettings()
-    implicit class Renderer(spec: TopLevelSpec) {
+    implicit class Renderer(spec: Vl4sTopLevelSpec) {
       def render(): Unit = {
         print(s"%html ${spec.htmlIframe()(htmlSettings)}")
       }

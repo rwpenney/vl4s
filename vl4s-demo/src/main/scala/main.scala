@@ -23,14 +23,14 @@ import uk.rwpenney.vl4s.ShortcutImplicits._
 
 trait SpecGenerator {
   def title: String
-  def makeSpec: TopLevelSpec
+  def makeSpec: Vl4sTopLevelSpec
 }
 
 
 object TrivialDemo extends SpecGenerator {
   def title = "Trivial VL4S demo"
 
-  def makeSpec: TopLevelSpec =
+  def makeSpec: Vl4sTopLevelSpec =
     SimpleSpec() .
       background("GhostWhite") .
       //data("myDataFile.csv") .
@@ -56,7 +56,7 @@ object TrivialDemo extends SpecGenerator {
 object WaveDemo extends SpecGenerator with BesselCalc {
   def title = "VL4S oscillatory functions"
 
-  def makeSpec: TopLevelSpec = {
+  def makeSpec: Vl4sTopLevelSpec = {
     val xvals = (0.0 to 8.0 by 0.2).toSeq
     val curves = Map(
       "cosine" -> xvals.map { math.cos(_) },
@@ -88,13 +88,14 @@ object WaveDemo extends SpecGenerator with BesselCalc {
 object BesselDemo extends SpecGenerator with BesselCalc {
   def title = "VL4S Bessel functions"
 
-  def makeSpec: TopLevelSpec = {
+  def makeSpec: Vl4sTopLevelSpec = {
     val xvals = (0.0 to 10.0 by 0.2).toSeq
     val orders = (0 until 4).toSeq
     val labels = orders.map { n => s"J${n}" }
-    val curveData = orders.zip(labels).flatMap { case (n, id) =>
-      xvals.map { x => Map("x" -> x, id -> J(n)(x)) }
-    } . toSeq
+    val curveData = xvals.map { x => {
+      orders.zip(labels).map {
+        case (n, id) => id -> J(n)(x) }.toMap + ( "x" -> x ) }
+    }
 
     RepeatedSpec() .
       data(InlineData() .
@@ -120,7 +121,7 @@ object BesselDemo extends SpecGenerator with BesselCalc {
 object GaussMixDemo extends SpecGenerator {
   def title = "VL4S Gaussian mixtures"
 
-  def makeSpec: TopLevelSpec = {
+  def makeSpec: Vl4sTopLevelSpec = {
     val inlineData = GaussMix(1000)
 
     SimpleSpec() .
@@ -230,7 +231,7 @@ object Demo {
     }
   }
 
-  def makeWebpage(spec: TopLevelSpec, title: String = ""): String = {
+  def makeWebpage(spec: Vl4sTopLevelSpec, title: String = ""): String = {
     implicit val htmlSettings = HtmlSettings(vegaExport=true)
 
     s"""${spec.htmlPage(headerPrefix=s"<title>${title}</title>",
