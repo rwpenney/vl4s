@@ -294,18 +294,15 @@ class CodeGen(val stream: OutputStream) {
   /** Convert TopLevelSpec typenames into package-level aliases */
   def makeSpecAliases(schema: VLschema): String = {
     val aliases = schema.types.flatMap {
-      case op: VLopDefn => {
-        CodeGen.specAliasRegexps.flatMap { case (regexp, alias) =>
-          regexp.findFirstIn(op.name) match {
-            case Some(_) => {
-              val codeable = CodeGen.toCodeable(op)
-              Some(alias -> codeable.typename)
-            }
-            case None => None
-          }
+      case op: VLopDefn =>  Some(op)
+      case _ =>             None
+    } . flatMap { op =>
+      CodeGen.specAliasRegexps.flatMap { case (regexp, alias) =>
+        regexp.findFirstIn(op.name) match {
+          case Some(_) => Some(alias → CodeGen.toCodeable(op).typename)
+          case None =>    None
         }
       }
-      case _ => Seq.empty
     } . toMap
 
     Seq(Seq("trait Vl4sSpecAliases {"),
