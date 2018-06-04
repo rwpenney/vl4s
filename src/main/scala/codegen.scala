@@ -86,7 +86,8 @@ class MapCoder(defn: VLmapOf) extends TypeCoder with ParentCoder {
   def typename = CodeGen.cleanClassName(defn.name)
   override def targetname = s"Map[String, ${itemtype}]"
   def toCode(schema: VLschema = VLschema.empty, recursive: Boolean = true) =
-    makeHelperClasses(Seq(defn.vltype), schema).getOrElse("")
+    makeHelperClasses(Seq(defn.vltype), schema, recursive=false).getOrElse("")
+    // FIXME - always non-recursive?
 }
 
 

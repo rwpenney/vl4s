@@ -4,8 +4,8 @@
 package uk.rwpenney.vl4s.build
 
 object VegaConfig {
-  val defaultSchemaVersion =      "2.4.1"
+  val defaultSchemaVersion =      "2.5.0"
   val defaultAutogenSource =      "auto-vega.scala"
   val vegaJSlibraryVersion =      "3.3.1"
-  val vegaEmbedJSlibraryVersion = "3.8.0"
+  val vegaEmbedJSlibraryVersion = "3.14.0"
 }
